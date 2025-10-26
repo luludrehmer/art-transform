@@ -24,10 +24,49 @@ export default function Result() {
   }
 
   const handleDownload = () => {
-    toast({
-      title: "Download started",
-      description: "Your artwork is being downloaded",
-    });
+    try {
+      // Convert base64 to blob
+      const base64Data = transformationData.transformedImage;
+      const arr = base64Data.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename based on style and timestamp
+      const styleSlug = transformationData.style.toLowerCase().replace(/\s+/g, '-');
+      const timestamp = new Date().toISOString().slice(0,10);
+      const extension = mime.split('/')[1];
+      link.download = `artwork-${styleSlug}-${timestamp}.${extension}`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download started",
+        description: "Your artwork is being downloaded",
+      });
+    } catch (error) {
+      console.error("Download error:", error);
+      toast({
+        variant: "destructive",
+        title: "Download failed",
+        description: "Could not download the artwork. Please try again.",
+      });
+    }
   };
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-card/20">

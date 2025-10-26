@@ -8,74 +8,65 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
 const stylePrompts: Record<string, string> = {
-  oil: `Transform this photograph into a classical oil painting. Apply the following characteristics:
-- Visible, expressive brush strokes with texture and depth
-- Rich, saturated colors with subtle color mixing on the canvas
-- Thick paint application (impasto technique) creating dimensional texture
-- Soft, blended edges with painterly transitions
-- Canvas texture visible throughout
-- Warm, artistic color palette with enhanced contrast
-- Traditional oil painting aesthetic with masterful composition
-- Maintain the subject and composition while applying full oil painting treatment`,
+  oil: `Apply an oil painting artistic style to this image while preserving all important details and composition. Transform it with:
+- Visible brush strokes and impasto texture overlay
+- Rich, saturated oil paint colors while keeping the original color scheme
+- Canvas texture throughout
+- Painterly edges and soft blending between areas
+- Keep all subjects, faces, objects, and background elements exactly as they appear
+- Enhance with warm artistic tones typical of oil paintings
+- Add depth through brush stroke direction and paint thickness variation
+The result should look like the original photo was painted in oils by a skilled artist.`,
 
-  acrylic: `Transform this photograph into a vibrant acrylic painting. Apply these characteristics:
-- Bold, confident brush strokes with clean edges
-- Bright, vivid colors with high saturation and pop
-- Matte finish with slight texture
-- Modern, contemporary painting style
-- Sharp color transitions with defined boundaries
-- Energetic, dynamic composition
-- Canvas texture with visible brush marks
-- Slightly graphic quality while maintaining painterly feel
-- Keep the subject recognizable but fully rendered as an acrylic artwork`,
+  acrylic: `Apply a vibrant acrylic painting style to this image while keeping all original details intact. Transform with:
+- Bold, visible brush strokes with clean edges
+- Bright, vivid acrylic colors enhancing the original palette
+- Matte paint finish with textured brush marks
+- Modern, energetic painting aesthetic
+- Sharp transitions between color areas
+- Preserve all subjects, people, objects, and composition exactly
+- Add contemporary artistic flair with dynamic brush work
+The result should feel like the original scene painted with acrylics.`,
 
-  sketch: `Transform this photograph into a detailed pencil sketch. Apply these characteristics:
-- Precise graphite pencil lines with varying pressure and darkness
-- Detailed cross-hatching and shading techniques
+  sketch: `Convert this image to a detailed pencil sketch while preserving all features and composition. Apply:
+- Precise graphite pencil lines and cross-hatching
+- Grayscale tones from light to dark
 - Paper texture visible throughout
-- Range from light sketch lines to deep, dark shadows
-- Artistic interpretation with emphasis on form and volume
-- Textured paper grain showing through
-- Hand-drawn aesthetic with natural pencil variations
-- Focus on light, shadow, and dimensional form
-- Monochromatic grayscale tones
-- Maintain subject accuracy while achieving artistic sketch quality`,
+- Hand-drawn aesthetic with natural pencil strokes
+- Maintain all facial features, objects, and details exactly as shown
+- Use shading and line work to define forms
+- Keep the same composition and perspective
+The result should look like a skilled artist drew this scene in pencil.`,
 
-  watercolor: `Transform this photograph into a delicate watercolor painting. Apply these characteristics:
-- Soft, translucent color washes with flowing edges
-- Water blooms and natural pigment spreading
-- Visible paper texture showing through transparent layers
-- Gentle color gradients and blending
-- Light, airy quality with luminous colors
-- Wet-on-wet technique with organic color mixing
-- White paper preservation in highlights
-- Delicate brush strokes and paint drips
-- Soft edges with beautiful color transitions
-- Artistic interpretation maintaining the subject while achieving watercolor elegance`,
+  watercolor: `Apply a watercolor painting style to this image while keeping all key elements. Transform with:
+- Soft, translucent watercolor washes
+- Gentle color bleeds and water blooms
+- Visible paper texture showing through
+- Preserve all subjects, faces, and important details
+- Light, airy watercolor aesthetic
+- Delicate brush strokes and flowing edges
+- Maintain the original composition and color harmony
+The result should appear as if painted with watercolors on paper.`,
 
-  charcoal: `Transform this photograph into a dramatic charcoal drawing. Apply these characteristics:
-- Rich, deep blacks with smooth gradients to light grays
-- Smudged and blended charcoal marks
+  charcoal: `Convert this image to a charcoal drawing while maintaining all details and composition. Apply:
+- Rich charcoal blacks and soft grays
+- Smudged, blended charcoal texture
+- Dramatic shadows and highlights
 - Textured paper surface visible
-- Bold, expressive strokes with natural charcoal texture
-- Strong contrast between light and shadow
-- Finger-smudged blending techniques
-- Raw, artistic quality with emotional depth
-- Grainy charcoal texture throughout
-- Dramatic tonal range
-- Maintain subject while achieving powerful charcoal drawing effect`,
+- Preserve all facial features, objects, and scene elements exactly
+- Use charcoal strokes to define form and depth
+- Keep the same framing and perspective
+The result should look like a charcoal drawing of this exact scene.`,
 
-  pastel: `Transform this photograph into a soft pastel artwork. Apply these characteristics:
-- Soft, chalky pastel texture with gentle blending
-- Muted, dreamy color palette with subtle tones
-- Visible pastel stick marks and texture
-- Paper texture showing through the pastels
-- Smooth color transitions with finger-blended areas
-- Delicate, romantic aesthetic
-- Slight graininess from pastel medium
-- Gentle highlights and soft shadows
-- Artistic interpretation with ethereal quality
-- Maintain subject while achieving beautiful pastel artwork feel`,
+  pastel: `Apply a soft pastel art style to this image while keeping all original elements. Transform with:
+- Soft, chalky pastel texture
+- Muted, dreamy color palette enhancing the original tones
+- Visible pastel stick marks
+- Paper texture showing through
+- Gentle blending and soft edges
+- Preserve all subjects, details, and composition exactly
+- Add romantic, ethereal pastel aesthetic
+The result should look like this scene rendered in soft pastels.`,
 };
 
 const transformWithGemini = async (
