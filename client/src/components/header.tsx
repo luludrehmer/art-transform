@@ -114,9 +114,9 @@ export function Header() {
               size="sm" 
               data-testid="button-signin"
             >
-              <a href="/api/login">
+              <a href="/api/auth/google">
                 <LogIn className="w-4 h-4 mr-2" />
-                Sign In
+                Sign In with Google
               </a>
             </Button>
           )}

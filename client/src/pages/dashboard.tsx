@@ -41,7 +41,7 @@ export default function Dashboard() {
         variant: "default",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = "/api/auth/google";
       }, 1000);
     }
   }, [isAuthenticated, isLoading, toast]);
@@ -138,7 +138,7 @@ export default function Dashboard() {
             variant: "destructive",
           });
           setTimeout(() => {
-            window.location.href = "/api/login";
+            window.location.href = "/api/auth/google";
           }, 500);
           return;
         }
