@@ -32,19 +32,8 @@ export default function Dashboard() {
   const [isTransforming, setIsTransforming] = useState(false);
   const [progress, setProgress] = useState(0);
   const [outOfCreditsOpen, setOutOfCreditsOpen] = useState(false);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Sign in required",
-        description: "Please sign in to transform your photos into art.",
-        variant: "default",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/auth/google";
-      }, 1000);
-    }
-  }, [isAuthenticated, isLoading, toast]);
 
   const currentStep: StepId = selectedFile ? (selectedStyle ? "transform" : "choose") : "upload";
   const completedSteps: StepId[] = [];
@@ -81,6 +70,12 @@ export default function Dashboard() {
 
   const handleTransform = async () => {
     if (!selectedFile || !selectedStyle || !previewUrl) return;
+
+    // Check if user is authenticated before transforming
+    if (!isAuthenticated) {
+      setLoginPromptOpen(true);
+      return;
+    }
 
     setIsTransforming(true);
     setProgress(0);
@@ -429,6 +424,53 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+
+      {/* Login Prompt Modal */}
+      <Dialog open={loginPromptOpen} onOpenChange={setLoginPromptOpen}>
+        <DialogContent data-testid="dialog-login-prompt">
+          <DialogHeader>
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
+              <LogIn className="w-8 h-8 text-primary" />
+            </div>
+            <DialogTitle className="text-center text-2xl">Sign In Required</DialogTitle>
+            <DialogDescription className="text-center">
+              Please sign in with Google to transform your photos into stunning artwork. You'll get 3 free credits to start!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-card border rounded-lg p-4">
+              <h4 className="font-semibold mb-2">What you'll get:</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  3 free transformation credits
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  Access to all 6 artistic styles
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  High-quality AI transformations
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  Save and download your artwork
+                </li>
+              </ul>
+            </div>
+            <Button 
+              className="w-full" 
+              size="lg" 
+              onClick={() => { window.location.href = "/api/auth/google"; }}
+              data-testid="button-signin-google"
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Sign In with Google
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Out of Credits Modal */}
       <Dialog open={outOfCreditsOpen} onOpenChange={setOutOfCreditsOpen}>
