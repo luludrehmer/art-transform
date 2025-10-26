@@ -83,7 +83,9 @@ const transformWithGemini = async (
   style: string
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.5-flash-image",
+    });
 
     // Extract base64 data from data URL
     const base64Match = originalImageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
@@ -92,7 +94,6 @@ const transformWithGemini = async (
     }
 
     const [, mimeType, base64Data] = base64Match;
-    const imageBuffer = Buffer.from(base64Data, "base64");
 
     // Get the appropriate prompt for the style
     const prompt = stylePrompts[style] || stylePrompts.oil;
@@ -105,25 +106,34 @@ const transformWithGemini = async (
           mimeType: `image/${mimeType}`,
         },
       },
-      prompt,
+      { text: prompt },
     ]);
+
+    console.log("Gemini API response received:", JSON.stringify({
+      candidates: result.response.candidates?.length,
+      parts: result.response.candidates?.[0]?.content?.parts?.length,
+    }));
 
     const response = result.response;
     const parts = response.candidates?.[0]?.content?.parts;
 
     if (!parts || parts.length === 0) {
+      console.error("No parts in Gemini response");
       throw new Error("No image generated from Gemini API");
     }
 
     // Find the inline data part (the generated image)
     for (const part of parts) {
+      console.log("Checking part:", { hasInlineData: !!part.inlineData, hasText: !!part.text });
       if (part.inlineData && part.inlineData.data) {
         // Return as data URL
         const generatedMimeType = part.inlineData.mimeType || "image/png";
+        console.log("Successfully generated image with Gemini");
         return `data:${generatedMimeType};base64,${part.inlineData.data}`;
       }
     }
 
+    console.error("No inline data found in response parts");
     throw new Error("No image data in Gemini API response");
   } catch (error) {
     console.error("Gemini API error:", error);
