@@ -1,43 +1,20 @@
 import { Link, useLocation } from "wouter";
-import { Sparkles, Crown, LogIn, UserPlus } from "lucide-react";
+import { Sparkles, Crown, LogIn, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Header() {
   const [location] = useLocation();
-  const [credits] = useState(3);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [signupOpen, setSignupOpen] = useState(false);
-  const { toast } = useToast();
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Login successful",
-      description: "Welcome back!",
-    });
-    setLoginOpen(false);
-  };
-
-  const handleSignup = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({
-      title: "Account created",
-      description: "You've received 3 free credits!",
-    });
-    setSignupOpen(false);
-  };
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -61,10 +38,10 @@ export function Header() {
               Home
             </Button>
           </Link>
-          <Link href="/dashboard" data-testid="link-nav-dashboard">
+          <Link href="/tools/convert-photo-to-painting-online-free" data-testid="link-nav-dashboard">
             <Button
               variant="ghost"
-              className={location === "/dashboard" ? "text-primary" : "text-muted-foreground"}
+              className={location === "/tools/convert-photo-to-painting-online-free" ? "text-primary" : "text-muted-foreground"}
               data-testid="button-nav-dashboard"
             >
               Create
@@ -72,93 +49,77 @@ export function Header() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-card">
-            <Crown className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold" data-testid="text-credits">
-              {credits} Credits
-            </span>
-          </div>
+        <div className="flex items-center gap-3">
+          {isAuthenticated && user && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-card">
+              <Crown className="w-4 h-4 text-primary" />
+              <span className="text-sm font-semibold" data-testid="text-credits">
+                {user.credits} {user.credits === 1 ? 'Credit' : 'Credits'}
+              </span>
+            </div>
+          )}
 
-          <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" data-testid="button-login">
+          {isLoading ? (
+            <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+          ) : isAuthenticated && user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  className="relative h-9 w-9 rounded-full" 
+                  data-testid="button-user-menu"
+                >
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage 
+                      src={user.profileImageUrl || undefined} 
+                      alt={user.email || "User"} 
+                    />
+                    <AvatarFallback>
+                      {user.email ? user.email.substring(0, 2).toUpperCase() : <User className="w-4 h-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user.firstName && user.lastName 
+                        ? `${user.firstName} ${user.lastName}` 
+                        : user.email || 'My Account'}
+                    </p>
+                    {user.email && (
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <a 
+                    href="/api/logout" 
+                    className="flex items-center cursor-pointer"
+                    data-testid="button-logout"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button 
+              asChild
+              size="sm" 
+              data-testid="button-signin"
+            >
+              <a href="/api/login">
                 <LogIn className="w-4 h-4 mr-2" />
-                Login
-              </Button>
-            </DialogTrigger>
-            <DialogContent data-testid="dialog-login">
-              <DialogHeader>
-                <DialogTitle>Welcome back</DialogTitle>
-                <DialogDescription>
-                  Login to access your art transformations
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-username">Username</Label>
-                  <Input
-                    id="login-username"
-                    type="text"
-                    placeholder="Enter your username"
-                    data-testid="input-login-username"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="Enter your password"
-                    data-testid="input-login-password"
-                  />
-                </div>
-                <Button type="submit" className="w-full" data-testid="button-login-submit">
-                  Login
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={signupOpen} onOpenChange={setSignupOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" data-testid="button-signup">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Sign Up
-              </Button>
-            </DialogTrigger>
-            <DialogContent data-testid="dialog-signup">
-              <DialogHeader>
-                <DialogTitle>Create your account</DialogTitle>
-                <DialogDescription>
-                  Get 3 free credits to start transforming your photos
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-username">Username</Label>
-                  <Input
-                    id="signup-username"
-                    type="text"
-                    placeholder="Choose a username"
-                    data-testid="input-signup-username"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="Create a password"
-                    data-testid="input-signup-password"
-                  />
-                </div>
-                <Button type="submit" className="w-full" data-testid="button-signup-submit">
-                  Create Account
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+                Sign In
+              </a>
+            </Button>
+          )}
         </div>
       </div>
     </header>

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { insertTransformationSchema } from "@shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
@@ -133,12 +134,60 @@ const transformWithGemini = async (
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  app.post("/api/transform", async (req, res) => {
+  // Setup authentication
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get user credits
+  app.get('/api/credits', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const credits = await storage.getUserCredits(userId);
+      res.json({ credits });
+    } catch (error) {
+      console.error("Error fetching credits:", error);
+      res.status(500).json({ message: "Failed to fetch credits" });
+    }
+  });
+
+  // Protected transformation endpoint - requires auth and credits
+  app.post("/api/transform", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check if user has credits
+      const credits = await storage.getUserCredits(userId);
+      if (credits < 1) {
+        res.status(403).json({ error: "Insufficient credits. You need 1 credit to transform an image." });
+        return;
+      }
+
       const validatedData = insertTransformationSchema.parse(req.body);
       
       if (!validatedData.originalImageUrl || validatedData.originalImageUrl.length === 0) {
         res.status(400).json({ error: "Original image is required" });
+        return;
+      }
+
+      // Deduct credit before processing
+      const deducted = await storage.deductCredits(userId, 1);
+      if (!deducted) {
+        res.status(403).json({ error: "Failed to deduct credits" });
         return;
       }
 

@@ -31,7 +31,7 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-              <Link href="/dashboard">
+              <Link href="/tools/convert-photo-to-painting-online-free">
                 <Button size="lg" className="w-full sm:w-auto" data-testid="button-get-started">
                   <Sparkles className="w-5 h-5 mr-2" />
                   Get Started Free
@@ -168,7 +168,7 @@ export default function Home() {
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Link href="/dashboard" className="w-full">
+                  <Link href="/tools/convert-photo-to-painting-online-free" className="w-full">
                     <Button variant="outline" className="w-full" data-testid={`button-try-${style.id}`}>
                       Try {style.name}
                     </Button>
@@ -422,7 +422,7 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/dashboard">
+              <Link href="/tools/convert-photo-to-painting-online-free">
                 <Button size="lg" className="mt-4" data-testid="button-cta-bottom">
                   <Sparkles className="w-5 h-5 mr-2" />
                   Get Started Free
@@ -451,7 +451,7 @@ export default function Home() {
             <div>
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link href="/dashboard">Create Art</Link></li>
+                <li><Link href="/tools/convert-photo-to-painting-online-free">Create Art</Link></li>
                 <li><a href="#pricing">Pricing</a></li>
                 <li><a href="#styles">Art Styles</a></li>
                 <li><a href="#examples">Examples</a></li>

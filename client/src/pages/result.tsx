@@ -15,7 +15,7 @@ export default function Result() {
 
   useEffect(() => {
     if (!transformationData) {
-      setLocation("/dashboard");
+      setLocation("/tools/convert-photo-to-painting-online-free");
     }
   }, [transformationData, setLocation]);
 
@@ -132,7 +132,7 @@ export default function Result() {
               <Download className="w-5 h-5 mr-2" />
               Download Artwork
             </Button>
-            <Link href="/dashboard">
+            <Link href="/tools/convert-photo-to-painting-online-free">
               <Button variant="outline" size="lg" data-testid="button-try-another">
                 <Sparkles className="w-5 h-5 mr-2" />
                 Try Another Style

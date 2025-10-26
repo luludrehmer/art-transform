@@ -1,26 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Image as ImageIcon, X, Sparkles, Check } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Upload, Image as ImageIcon, X, Sparkles, Check, Crown, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { allStyles, styleData } from "@/lib/styles";
 import { ProgressStepper, type StepId } from "@/components/progress-stepper";
 import { useTransformation } from "@/lib/transformation-context";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import type { ArtStyle } from "@shared/schema";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { setTransformationData } = useTransformation();
   const { toast } = useToast();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedStyle, setSelectedStyle] = useState<ArtStyle | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [outOfCreditsOpen, setOutOfCreditsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to transform your photos into art.",
+        variant: "default",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 1000);
+    }
+  }, [isAuthenticated, isLoading, toast]);
 
   const currentStep: StepId = selectedFile ? (selectedStyle ? "transform" : "choose") : "upload";
   const completedSteps: StepId[] = [];
@@ -91,6 +115,34 @@ export default function Dashboard() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+        
+        if (response.status === 403 && errorData.error?.includes("Insufficient credits")) {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+          }
+          setIsTransforming(false);
+          setProgress(0);
+          setOutOfCreditsOpen(true);
+          return;
+        }
+        
+        if (response.status === 401) {
+          if (progressInterval) {
+            clearInterval(progressInterval);
+          }
+          setIsTransforming(false);
+          setProgress(0);
+          toast({
+            title: "Session expired",
+            description: "Please sign in again.",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            window.location.href = "/api/login";
+          }, 500);
+          return;
+        }
+        
         throw new Error(errorData.error || "Transformation failed");
       }
 
@@ -377,6 +429,48 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+
+      {/* Out of Credits Modal */}
+      <Dialog open={outOfCreditsOpen} onOpenChange={setOutOfCreditsOpen}>
+        <DialogContent data-testid="dialog-out-of-credits">
+          <DialogHeader>
+            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
+              <Crown className="w-8 h-8 text-primary" />
+            </div>
+            <DialogTitle className="text-center text-2xl">Out of Credits</DialogTitle>
+            <DialogDescription className="text-center">
+              You've used all your free credits. Upgrade to continue transforming your photos into stunning artwork.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-card border rounded-lg p-4">
+              <h4 className="font-semibold mb-2">What you get with more credits:</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  Unlimited transformations
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  All 6 artistic styles
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  High-resolution downloads
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-primary" />
+                  Priority processing
+                </li>
+              </ul>
+            </div>
+            <Button className="w-full" size="lg" data-testid="button-upgrade">
+              <Crown className="w-4 h-4 mr-2" />
+              Upgrade Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
