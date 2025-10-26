@@ -37,13 +37,30 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Determine the callback URL based on environment
+  const getCallbackURL = () => {
+    if (process.env.NODE_ENV === "production") {
+      return "https://portraits.art-and-see.com/api/auth/google/callback";
+    }
+    // Development: use REPLIT_DEV_DOMAIN
+    const devDomain = process.env.REPLIT_DEV_DOMAIN || process.env.REPLIT_DOMAINS?.split(',')[0];
+    if (devDomain) {
+      return `https://${devDomain}/api/auth/google/callback`;
+    }
+    // Fallback
+    return "http://localhost:5000/api/auth/google/callback";
+  };
+
+  const callbackURL = getCallbackURL();
+  console.log(`🔐 OAuth callback URL: ${callbackURL}`);
+
   // Google OAuth Strategy
   passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID || "",
         clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-        callbackURL: "/api/auth/google/callback",
+        callbackURL,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
