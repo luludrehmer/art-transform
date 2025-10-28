@@ -152,17 +152,21 @@ export default function Dashboard() {
           const checkStatus = async () => {
             try {
               attempts++;
+              console.log(`[Polling] Attempt ${attempts}/${maxAttempts} for transformation ${transformationId}`);
               
               const statusResponse = await fetch(`/api/transform/${transformationId}`);
               
               if (!statusResponse.ok) {
+                console.error(`[Polling] Status check failed:`, statusResponse.status);
                 reject(new Error("Failed to check transformation status"));
                 return;
               }
 
               const transformation = await statusResponse.json();
+              console.log(`[Polling] Transformation status:`, transformation.status);
 
               if (transformation.status === "completed") {
+                console.log(`[Polling] Transformation completed! Redirecting to result page...`);
                 if (progressInterval) {
                   clearInterval(progressInterval);
                   progressInterval = null;
@@ -182,13 +186,17 @@ export default function Dashboard() {
                 
                 resolve();
               } else if (transformation.status === "failed") {
+                console.error(`[Polling] Transformation failed`);
                 reject(new Error("Transformation failed on server"));
               } else if (attempts < maxAttempts) {
+                console.log(`[Polling] Status is "${transformation.status}", polling again in 300ms...`);
                 setTimeout(checkStatus, 300);
               } else {
+                console.error(`[Polling] Timeout after ${maxAttempts} attempts`);
                 reject(new Error("Transformation timeout"));
               }
             } catch (error) {
+              console.error(`[Polling] Error during status check:`, error);
               reject(error);
             }
           };
