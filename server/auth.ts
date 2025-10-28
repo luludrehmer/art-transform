@@ -53,13 +53,19 @@ export async function setupAuth(app: Express) {
 
   const callbackURL = getCallbackURL();
   console.log(`🔐 OAuth callback URL: ${callbackURL}`);
+  
+  // Debug logging for credentials
+  const clientID = process.env.GOOGLE_CLIENT_ID || "";
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
+  console.log(`🔐 CLIENT_ID: ${clientID.substring(0, 20)}...${clientID.substring(clientID.length - 10)}`);
+  console.log(`🔐 CLIENT_SECRET length: ${clientSecret.length}, first 10 chars: ${clientSecret.substring(0, 10)}...`);
 
   // Google OAuth Strategy
   passport.use(
     new GoogleStrategy(
       {
-        clientID: process.env.GOOGLE_CLIENT_ID || "",
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+        clientID,
+        clientSecret,
         callbackURL,
       },
       async (accessToken, refreshToken, profile, done) => {
