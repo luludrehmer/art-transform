@@ -59,8 +59,5 @@ export interface StyleInfo {
   id: ArtStyle;
   name: string;
   description: string;
-  intensity: number;
-  texture: number;
-  detail: number;
   image: string;
 }

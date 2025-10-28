@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -269,49 +268,6 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-
-            {selectedStyle && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Style Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">Intensity</span>
-                      <span className="font-medium">
-                        {allStyles.find((s) => s.id === selectedStyle)?.intensity}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={allStyles.find((s) => s.id === selectedStyle)?.intensity}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">Texture</span>
-                      <span className="font-medium">
-                        {allStyles.find((s) => s.id === selectedStyle)?.texture}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={allStyles.find((s) => s.id === selectedStyle)?.texture}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">Detail</span>
-                      <span className="font-medium">
-                        {allStyles.find((s) => s.id === selectedStyle)?.detail}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={allStyles.find((s) => s.id === selectedStyle)?.detail}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </aside>
 
           <main>
@@ -392,7 +348,12 @@ export default function Dashboard() {
                                 {allStyles.find((s) => s.id === selectedStyle)?.name}{" "}
                                 style...
                               </p>
-                              <Progress value={progress} className="mb-2" />
+                              <div className="w-full bg-muted rounded-full h-2 mb-2 overflow-hidden">
+                                <div
+                                  className="h-full bg-primary transition-all duration-300"
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
                               <p className="text-xs text-muted-foreground">{progress}%</p>
                             </div>
                           </div>

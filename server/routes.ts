@@ -9,65 +9,231 @@ import { setupAuth, isAuthenticated } from "./auth";
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
 const stylePrompts: Record<string, string> = {
-  oil: `Apply an oil painting artistic style to this image while preserving all important details and composition. Transform it with:
-- Visible brush strokes and impasto texture overlay
-- Rich, saturated oil paint colors while keeping the original color scheme
-- Canvas texture throughout
-- Painterly edges and soft blending between areas
-- Keep all subjects, faces, objects, and background elements exactly as they appear
-- Enhance with warm artistic tones typical of oil paintings
-- Add depth through brush stroke direction and paint thickness variation
-The result should look like the original photo was painted in oils by a skilled artist.`,
+  "oil-painting": `Transform this photo into a realistic oil painting with authentic oil painting techniques. Apply these specific characteristics:
 
-  acrylic: `Apply a vibrant acrylic painting style to this image while keeping all original details intact. Transform with:
-- Bold, visible brush strokes with clean edges
-- Bright, vivid acrylic colors enhancing the original palette
-- Matte paint finish with textured brush marks
-- Modern, energetic painting aesthetic
-- Sharp transitions between color areas
-- Preserve all subjects, people, objects, and composition exactly
-- Add contemporary artistic flair with dynamic brush work
-The result should feel like the original scene painted with acrylics.`,
+PAINT APPLICATION & TEXTURE:
+- Thick, visible impasto brush strokes with dimensional paint buildup
+- Directional brush work following the form and contours of subjects
+- Alla prima technique with wet-on-wet blending where colors meet
+- Paint knife marks in highlights and textured areas
+- Visible canvas weave texture throughout, especially in lighter areas
+- Glazing effects in shadow areas with transparent color layers
 
-  sketch: `Convert this image to a detailed pencil sketch while preserving all features and composition. Apply:
-- Precise graphite pencil lines and cross-hatching
-- Grayscale tones from light to dark
-- Paper texture visible throughout
-- Hand-drawn aesthetic with natural pencil strokes
-- Maintain all facial features, objects, and details exactly as shown
-- Use shading and line work to define forms
-- Keep the same composition and perspective
-The result should look like a skilled artist drew this scene in pencil.`,
+COLOR & TONE:
+- Rich, deep oil paint pigments with natural saturation
+- Warm undertones typical of linseed oil medium
+- Subtle color mixing and muddy transitions where paint meets
+- Chiaroscuro lighting with dramatic light-to-shadow transitions
+- Slightly muted highlights to avoid artificial brightness
+- Earthy, natural color palette with realistic pigment behavior
 
-  watercolor: `Apply a watercolor painting style to this image while keeping all key elements. Transform with:
-- Soft, translucent watercolor washes
-- Gentle color bleeds and water blooms
-- Visible paper texture showing through
-- Preserve all subjects, faces, and important details
-- Light, airy watercolor aesthetic
-- Delicate brush strokes and flowing edges
-- Maintain the original composition and color harmony
-The result should appear as if painted with watercolors on paper.`,
+ARTISTIC DETAILS:
+- Loose, expressive brushwork in background areas
+- Tighter, more controlled detail in focal points and faces
+- Sfumato effect for soft atmospheric transitions
+- Paint buildup creating actual texture and relief
+- Traditional oil painting composition and framing
 
-  charcoal: `Convert this image to a charcoal drawing while maintaining all details and composition. Apply:
-- Rich charcoal blacks and soft grays
-- Smudged, blended charcoal texture
-- Dramatic shadows and highlights
-- Textured paper surface visible
-- Preserve all facial features, objects, and scene elements exactly
-- Use charcoal strokes to define form and depth
-- Keep the same framing and perspective
-The result should look like a charcoal drawing of this exact scene.`,
+The result must look indistinguishable from a photograph of an actual oil painting on canvas, not a digital filter.`,
 
-  pastel: `Apply a soft pastel art style to this image while keeping all original elements. Transform with:
-- Soft, chalky pastel texture
-- Muted, dreamy color palette enhancing the original tones
-- Visible pastel stick marks
-- Paper texture showing through
-- Gentle blending and soft edges
-- Preserve all subjects, details, and composition exactly
-- Add romantic, ethereal pastel aesthetic
-The result should look like this scene rendered in soft pastels.`,
+  acrylic: `Transform this photo into an authentic acrylic painting with modern acrylic painting characteristics. Apply these specific features:
+
+PAINT APPLICATION & TEXTURE:
+- Bold, graphic brush strokes with hard, defined edges
+- Fast-drying acrylic aesthetic with no wet blending
+- Flat, matte paint surface with slight sheen in thick areas
+- Crisp color boundaries and sharp transitions
+- Palette knife techniques creating flat color planes
+- Visible brush bristle marks in the paint surface
+- Layered painting with complete opacity - no underlying layers showing through
+
+COLOR & TONE:
+- Vibrant, intense pigments with high chroma colors
+- Clean, unmixed colors applied directly
+- Bright, saturated hues without oil painting's warmth
+- Contemporary color choices - bold primaries and secondaries
+- Pop art influenced color relationships
+- High contrast between light and dark areas
+
+ARTISTIC STYLE:
+- Modern, graphic design aesthetic
+- Energetic, dynamic composition
+- Contemporary painting techniques
+- Urban art influenced edge quality
+- Clean, deliberate mark-making
+- Confident, expressive brushwork with personality
+
+The result must look like a real contemporary acrylic painting photographed in a gallery, with authentic acrylic paint properties.`,
+
+  "pencil-sketch": `Convert this photo into an authentic pencil sketch with traditional graphite drawing techniques. Apply these specific characteristics:
+
+PENCIL TECHNIQUE & MARKS:
+- Visible graphite pencil strokes with varying pressure
+- Cross-hatching and parallel line shading for tones
+- Contour lines defining edges and forms
+- Smudged graphite for soft shadows and atmospheric effects
+- Directional hatching following the form and volume
+- Sharp, precise lines for details and focal points
+- Loose, gestural strokes for less important areas
+- Eraser marks creating highlights by lifting graphite
+
+TONAL RANGE & SHADING:
+- Full range from white paper to deep graphite blacks
+- Midtones built up with layered hatching
+- Core shadows with dense, dark graphite
+- Highlights left as bare white paper
+- Gradual tonal transitions through varied line density
+- Reflected light in shadow areas
+- Form shadow and cast shadow distinction
+
+PAPER & SURFACE:
+- Visible paper tooth and texture throughout
+- Slight paper grain affecting pencil strokes
+- Uneven graphite coverage showing paper surface
+- Natural drawing paper color (off-white/cream)
+- Paper texture more visible in lighter areas
+
+DRAWING STYLE:
+- Classical academic drawing approach
+- Observed life drawing aesthetic
+- Anatomically accurate with artistic interpretation
+- Construction lines subtly visible
+- Artist's hand and personality in mark-making
+- Traditional portrait/still life drawing conventions
+
+The result must look like an actual graphite pencil drawing photographed on drawing paper, not a digital sketch effect.`,
+
+  watercolor: `Transform this photo into an authentic watercolor painting with traditional watercolor techniques. Apply these specific characteristics:
+
+WATERCOLOR TECHNIQUE:
+- Transparent, luminous washes with light showing through
+- Wet-on-wet bleeding where colors meet naturally
+- Cauliflower blooms and backruns from water pooling
+- Hard edges where paint dries with pigment concentration
+- Soft, diffused edges from wet-into-wet technique
+- Granulation in darker washes showing pigment settling
+- White paper preserved for brightest highlights
+- Lifting and scraping effects for texture
+
+COLOR & PIGMENT:
+- Transparent, flowing color with natural water diffusion
+- Subtle color mixing happening on paper, not pre-mixed
+- Watercolor staining and settling patterns
+- Lighter values overall due to water dilution
+- Colors becoming more intense at edges of washes
+- Natural pigment separation in mixed areas
+- Watercolor palette typical colors and combinations
+
+PAPER & SURFACE:
+- Cold-pressed watercolor paper texture highly visible
+- Paper buckling and warping slightly from water
+- White paper showing through transparent washes
+- Paper texture affecting paint flow and settling
+- Deckled edges or paper border if full sheet
+- Natural watercolor paper color (bright white)
+
+PAINTING CHARACTERISTICS:
+- Light, airy, ethereal quality
+- Spontaneous, fluid paint application
+- Happy accidents and organic effects
+- Loose, impressionistic rendering
+- Atmospheric perspective with lighter distant areas
+- Traditional watercolor subject treatment
+- Negative space with bare paper
+
+The result must look like a real watercolor painting photographed under natural light, showing authentic watercolor medium properties.`,
+
+  charcoal: `Transform this photo into an authentic charcoal drawing with traditional charcoal techniques. Apply these specific characteristics:
+
+CHARCOAL TECHNIQUE & MARKS:
+- Rich, velvety black charcoal marks with depth
+- Smudged and blended tones using finger or tortillon
+- Compressed charcoal for intense blacks
+- Vine charcoal for lighter, atmospheric tones
+- Directional strokes following form and contour
+- Cross-contour shading building volume
+- Eraser used for highlights - lifting charcoal to reveal paper
+- Charcoal dust creating soft, atmospheric effects
+
+TONAL RANGE & CONTRAST:
+- Dramatic value range from pure white to deepest black
+- High contrast with bold shadows
+- Chiaroscuro lighting emphasis
+- Dense, solid blacks in deepest shadows
+- Soft, graduated midtones through blending
+- Bright highlights from eraser or bare paper
+- Atmospheric grays in background and distance
+- Form revealed through light and shadow alone
+
+TEXTURE & SURFACE:
+- Visible charcoal particle texture
+- Rough paper tooth showing through
+- Smudge marks and finger blending visible
+- Paper texture affecting charcoal adhesion
+- Slightly dusty, matte surface quality
+- Natural drawing paper tone (off-white or toned)
+- Uneven charcoal coverage showing hand-drawn quality
+
+DRAWING STYLE:
+- Expressive, gestural mark-making
+- Bold, confident strokes
+- Classical figure drawing aesthetic
+- Emphasis on form, volume, and light
+- Dramatic, emotional rendering
+- Traditional academic drawing approach
+- Artist's hand evident in every mark
+
+The result must look like an actual charcoal drawing photographed on paper, with authentic charcoal medium characteristics and no digital processing.`,
+
+  pastel: `Transform this photo into an authentic soft pastel artwork with traditional pastel techniques. Apply these specific characteristics:
+
+PASTEL APPLICATION & TEXTURE:
+- Soft, chalky pastel stick marks with powdery texture
+- Visible individual pastel strokes and layers
+- Blended areas using finger or blending stump
+- Unblended strokes showing pure pigment color
+- Layered color building up on paper surface
+- Side-of-stick broad marks for large areas
+- Tip-of-stick precise marks for details
+- Pastel dust and particles visible on surface
+
+COLOR & PIGMENT:
+- Soft, muted color palette with gentle saturation
+- Multiple pastel colors layered creating optical mixing
+- Pure pigment colors from pastel sticks
+- Velvety color quality unique to pastels
+- Subtle color variations from layering
+- Romantic, dreamy color harmonies
+- Colors slightly dusty and chalky in appearance
+- Pastel's natural light-reflecting quality
+
+PAPER & SURFACE:
+- Textured pastel paper (sanded or velour surface)
+- Paper tooth visible affecting pastel adhesion
+- Paper color influencing overall tone
+- Texture most visible in lighter applications
+- Paper showing through in some areas
+- Pastel fixed creating slight sheen in some areas
+
+ARTISTIC STYLE:
+- Impressionistic, soft-focus rendering
+- Ethereal, romantic atmosphere
+- Gentle edges and soft transitions
+- Light, luminous quality
+- French Impressionist pastel traditions
+- Emphasis on color harmony and mood
+- Delicate, refined aesthetic
+- Atmospheric and dreamlike quality
+
+TECHNIQUE DETAILS:
+- Hatching and cross-hatching with pastel sticks
+- Scumbling technique for texture
+- Feathering strokes for soft edges
+- Impasto-like buildup in some areas
+- Subtle blending for smooth transitions
+- Linear marks over blended areas for detail
+
+The result must look like an actual soft pastel artwork photographed in natural light, showing authentic pastel medium characteristics and traditional pastel painting techniques.`,
 };
 
 const transformWithGemini = async (
@@ -88,7 +254,7 @@ const transformWithGemini = async (
     const [, mimeType, base64Data] = base64Match;
 
     // Get the appropriate prompt for the style
-    const prompt = stylePrompts[style] || stylePrompts.oil;
+    const prompt = stylePrompts[style] || stylePrompts["oil-painting"];
 
     // Generate content with image and prompt
     const result = await model.generateContent([

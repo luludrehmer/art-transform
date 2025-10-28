@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Sparkles, Crown, LogIn, LogOut, User } from "lucide-react";
+import { Sparkles, Crown, LogIn, LogOut, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { styleSEOData } from "@shared/seoMetadata";
 
 export function Header() {
   const [location] = useLocation();
@@ -38,10 +39,40 @@ export function Header() {
               Home
             </Button>
           </Link>
-          <Link href="/tools/convert-photo-to-painting-online-free" data-testid="link-nav-dashboard">
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="text-muted-foreground"
+                data-testid="button-nav-tools"
+              >
+                Art Styles
+                <ChevronDown className="ml-1 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel>Choose Your Style</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {Object.values(styleSEOData).map((style) => (
+                <DropdownMenuItem key={style.style} asChild>
+                  <Link href={`/tools/${style.slug}`}>
+                    <div className="cursor-pointer w-full">
+                      <div className="font-medium">{style.h1.replace(" Online Free", "").replace("Convert Photo to ", "").replace(" Painting", "")}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-1">
+                        {style.h2Tagline}
+                      </div>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Link href="/tools/dashboard" data-testid="link-nav-dashboard">
             <Button
               variant="ghost"
-              className={location === "/tools/convert-photo-to-painting-online-free" ? "text-primary" : "text-muted-foreground"}
+              className={location === "/tools/dashboard" ? "text-primary" : "text-muted-foreground"}
               data-testid="button-nav-dashboard"
             >
               Create
