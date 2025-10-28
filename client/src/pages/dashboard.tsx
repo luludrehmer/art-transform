@@ -147,7 +147,7 @@ export default function Dashboard() {
       const pollTransformation = (): Promise<void> => {
         return new Promise((resolve, reject) => {
           let attempts = 0;
-          const maxAttempts = 15;
+          const maxAttempts = 60;
 
           const checkStatus = async () => {
             try {
