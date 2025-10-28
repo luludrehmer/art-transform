@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       if (!user) {
         res.status(404).json({ message: "User not found" });
@@ -156,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user credits
   app.get('/api/credits', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const credits = await storage.getUserCredits(userId);
       res.json({ credits });
     } catch (error) {
@@ -168,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Protected transformation endpoint - requires auth and credits
   app.post("/api/transform", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       
       // Check if user has credits
       const credits = await storage.getUserCredits(userId);
