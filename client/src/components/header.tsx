@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Sparkles, Crown, LogIn, LogOut, User, PawPrint, Users, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,14 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { useCategory } from "@/lib/category-context";
 import { cn } from "@/lib/utils";
-
-type Category = "pets" | "family" | "kids";
 
 export function Header() {
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [activeCategory, setActiveCategory] = useState<Category>("pets");
+  const { activeCategory, setActiveCategory } = useCategory();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">

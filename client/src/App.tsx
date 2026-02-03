@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { TransformationProvider } from "@/lib/transformation-context";
+import { CategoryProvider } from "@/lib/category-context";
 import { Header } from "@/components/header";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
@@ -14,6 +15,9 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/pets" component={Home} />
+      <Route path="/family" component={Home} />
+      <Route path="/kids" component={Home} />
       <Route path="/tools/dashboard" component={Dashboard} />
       <Route path="/result" component={Result} />
       {/* Legacy redirects */}
@@ -32,13 +36,15 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <TransformationProvider>
-          <div className="min-h-screen flex flex-col">
-            <Header />
-            <Router />
-          </div>
-          <Toaster />
-        </TransformationProvider>
+        <CategoryProvider>
+          <TransformationProvider>
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <Router />
+            </div>
+            <Toaster />
+          </TransformationProvider>
+        </CategoryProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

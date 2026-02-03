@@ -20,13 +20,56 @@ import { cn } from "@/lib/utils";
 import { allStyles, styleData } from "@/lib/styles";
 import { addWatermark } from "@/lib/watermark";
 import { useToast } from "@/hooks/use-toast";
+import { useCategory, type Category } from "@/lib/category-context";
 import type { ArtStyle } from "@shared/schema";
+
+import pets1 from "@/assets/images/pets-1.png";
+import pets2 from "@/assets/images/pets-2.png";
+import pets3 from "@/assets/images/pets-3.png";
+import family1 from "@/assets/images/family-1.png";
+import family2 from "@/assets/images/family-2.png";
+import family3 from "@/assets/images/family-3.png";
+import kids1 from "@/assets/images/kids-1.png";
+import kids2 from "@/assets/images/kids-2.png";
+import kids3 from "@/assets/images/kids-3.png";
 
 type FlowStep = "upload" | "preview" | "download";
 
+const categoryContent: Record<Category, {
+  headline: string;
+  subheadline: string;
+  uploadText: string;
+  images: string[];
+  trustText: string;
+}> = {
+  pets: {
+    headline: "The Portrait\nYour Pet Deserves",
+    subheadline: "Free Preview · From $29 to purchase",
+    uploadText: "Upload one or more pet photos",
+    images: [pets1, pets2, pets3],
+    trustText: "#1 in Pet Portraits",
+  },
+  family: {
+    headline: "Timeless Family\nPortraits",
+    subheadline: "Free Preview · From $29 to purchase",
+    uploadText: "Upload a family photo",
+    images: [family1, family2, family3],
+    trustText: "#1 in Family Portraits",
+  },
+  kids: {
+    headline: "Magical Portraits\nFor Little Ones",
+    subheadline: "Free Preview · From $29 to purchase",
+    uploadText: "Upload a photo of your child",
+    images: [kids1, kids2, kids3],
+    trustText: "#1 in Kids Portraits",
+  },
+};
+
 export default function Home() {
   const { toast } = useToast();
+  const { activeCategory } = useCategory();
   const resultRef = useRef<HTMLDivElement>(null);
+  const content = categoryContent[activeCategory];
   
   const [currentStep, setCurrentStep] = useState<FlowStep>("upload");
   const [selectedStyle, setSelectedStyle] = useState<ArtStyle>("oil-painting");
@@ -275,13 +318,11 @@ export default function Home() {
         </div>
 
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3 font-serif italic">
-            Transform Your Photo
-            <br />
-            Into Art
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 font-serif italic whitespace-pre-line">
+            {content.headline}
           </h1>
           <p className="text-muted-foreground">
-            Free Preview · From $29 to purchase
+            {content.subheadline}
           </p>
         </div>
 
@@ -326,7 +367,7 @@ export default function Home() {
                     <Upload className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Upload your photo</h3>
+                    <h3 className="text-lg font-semibold mb-2">{content.uploadText}</h3>
                     <p className="text-sm text-muted-foreground">Use a well-lit photo for best results</p>
                   </div>
                   <input
@@ -381,17 +422,16 @@ export default function Home() {
               </div>
               <span className="text-sm text-muted-foreground">Trustpilot</span>
             </div>
-            <p className="text-center text-sm text-muted-foreground mb-8">#1 in Art Portraits</p>
+            <p className="text-center text-sm text-muted-foreground mb-8">{content.trustText}</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              {allStyles.slice(0, 3).map((style) => (
+              {content.images.map((image, index) => (
                 <div
-                  key={style.id}
+                  key={index}
                   className="aspect-[3/4] rounded-xl overflow-hidden hover-elevate cursor-pointer"
-                  onClick={() => setSelectedStyle(style.id)}
-                  data-testid={`gallery-${style.id}`}
+                  data-testid={`gallery-${activeCategory}-${index}`}
                 >
-                  <img src={style.image} alt={style.name} className="w-full h-full object-cover" />
+                  <img src={image} alt={`${activeCategory} portrait ${index + 1}`} className="w-full h-full object-cover" />
                 </div>
               ))}
             </div>
