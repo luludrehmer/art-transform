@@ -37,7 +37,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1">
+        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full border bg-muted/50">
           <Button
             variant={activeCategory === "pets" ? "default" : "ghost"}
             size="sm"
