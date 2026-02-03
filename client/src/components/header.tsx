@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Sparkles, Crown, LogIn, LogOut, User } from "lucide-react";
+import { Sparkles, Crown, LogIn, LogOut, User, PawPrint, Users, Smile } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -11,10 +13,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
+
+type Category = "pets" | "family" | "kids";
 
 export function Header() {
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const [activeCategory, setActiveCategory] = useState<Category>("pets");
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -30,28 +36,46 @@ export function Header() {
 
         <nav className="hidden md:flex items-center gap-1">
           <Button
-            variant="default"
+            variant={activeCategory === "pets" ? "default" : "ghost"}
             size="sm"
-            className="rounded-full"
+            className={cn(
+              "rounded-full gap-2",
+              activeCategory !== "pets" && "text-muted-foreground"
+            )}
+            onClick={() => setActiveCategory("pets")}
             data-testid="button-category-pets"
           >
+            <PawPrint className="w-4 h-4" />
             Pets
           </Button>
           <Button
-            variant="ghost"
+            variant={activeCategory === "family" ? "default" : "ghost"}
             size="sm"
-            className="rounded-full text-muted-foreground"
+            className={cn(
+              "rounded-full gap-2",
+              activeCategory !== "family" && "text-muted-foreground"
+            )}
+            onClick={() => setActiveCategory("family")}
             data-testid="button-category-family"
           >
+            <Users className="w-4 h-4" />
             Family
           </Button>
           <Button
-            variant="ghost"
+            variant={activeCategory === "kids" ? "default" : "ghost"}
             size="sm"
-            className="rounded-full text-muted-foreground"
+            className={cn(
+              "rounded-full gap-2",
+              activeCategory !== "kids" && "text-muted-foreground"
+            )}
+            onClick={() => setActiveCategory("kids")}
             data-testid="button-category-kids"
           >
+            <Smile className="w-4 h-4" />
             Kids
+            <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs bg-amber-400 text-amber-900">
+              New
+            </Badge>
           </Button>
         </nav>
 
