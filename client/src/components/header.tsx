@@ -29,25 +29,30 @@ export function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
-          <Link href="/" data-testid="link-nav-home">
-            <Button
-              variant="ghost"
-              className={location === "/" ? "text-primary" : "text-muted-foreground"}
-              data-testid="button-nav-home"
-            >
-              Home
-            </Button>
-          </Link>
-
-          <Link href="/tools/dashboard" data-testid="link-nav-dashboard">
-            <Button
-              variant="ghost"
-              className={location === "/tools/dashboard" ? "text-primary" : "text-muted-foreground"}
-              data-testid="button-nav-dashboard"
-            >
-              Create
-            </Button>
-          </Link>
+          <Button
+            variant="default"
+            size="sm"
+            className="rounded-full"
+            data-testid="button-category-pets"
+          >
+            Pets
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full text-muted-foreground"
+            data-testid="button-category-family"
+          >
+            Family
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full text-muted-foreground"
+            data-testid="button-category-kids"
+          >
+            Kids
+          </Button>
         </nav>
 
         <div className="flex items-center gap-3">
