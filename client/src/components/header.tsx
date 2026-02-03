@@ -27,7 +27,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between gap-4 px-4">
+      <div className="container relative flex h-16 items-center justify-between gap-4 px-4">
         <Link href="/" data-testid="link-home">
           <div className="flex items-center gap-3 hover-elevate active-elevate-2 rounded-md px-3 py-2 -ml-3">
             <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary">
@@ -37,7 +37,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full border bg-muted/50">
+        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full border bg-muted/50 absolute left-1/2 -translate-x-1/2">
           <Button
             variant={activeCategory === "pets" ? "default" : "ghost"}
             size="sm"
