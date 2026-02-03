@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TransformationProvider } from "@/lib/transformation-context";
 import { CategoryProvider } from "@/lib/category-context";
 import { Header } from "@/components/header";
+import { NavigationDrawer } from "@/components/navigation-drawer";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Result from "@/pages/result";
@@ -49,15 +51,18 @@ function Router() {
 }
 
 function App() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <CategoryProvider>
           <TransformationProvider>
             <div className="min-h-screen flex flex-col">
-              <Header />
+              <Header onMenuClick={() => setDrawerOpen(true)} />
               <Router />
             </div>
+            <NavigationDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
             <Toaster />
           </TransformationProvider>
         </CategoryProvider>

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { Sparkles, Crown, LogOut, User, PawPrint, Users, Smile, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,13 +14,16 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useCategory } from "@/lib/category-context";
 import { cn } from "@/lib/utils";
-import { NavigationDrawer, MenuButton } from "./navigation-drawer";
+import { MenuButton } from "./navigation-drawer";
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick: () => void;
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const { activeCategory, setActiveCategory } = useCategory();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -167,11 +169,9 @@ export function Header() {
             </DropdownMenu>
           ) : null}
 
-          <MenuButton onClick={() => setDrawerOpen(true)} />
+          <MenuButton onClick={onMenuClick} />
         </div>
       </div>
-
-      <NavigationDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </header>
   );
 }
