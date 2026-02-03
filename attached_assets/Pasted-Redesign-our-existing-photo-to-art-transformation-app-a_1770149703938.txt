@@ -1,0 +1,64 @@
+Redesign our existing photo-to-art transformation app at ai.art-and-see.com/tools/dashboard
+
+## CONTEXT:
+- This app receives traffic from our SEO toolhub pages
+- Current problem: We ask for sign-in and show "3 free credits" BEFORE users see any value
+- Goal: Fable-style conversion flow (fable.surrealium.world) - show value FIRST, monetize AFTER emotional investment
+- Our competitive advantage: We can upsell to REAL hand-painted portraits ($149+), competitors can't
+
+## CURRENT FLOW (broken):
+Sign in → Credits → Explanation → Upload → Result
+
+## NEW FLOW (convert this to):
+
+### Screen 1: Upload (zero friction)
+- Headline: "Transform Your Photo Into Art"
+- Large drag-and-drop upload zone
+- Horizontal style selector: Oil Painting, Watercolor, Acrylic, Pastel, Charcoal, Pencil Sketch (default: Oil)
+- NO sign-in gate
+- NO credits mention
+- NO "how it works" sections
+- Small text below: "Free preview • No signup required"
+
+### Screen 2: Processing
+- Show uploaded image with loading animation
+- Text: "Creating your masterpiece..."
+- Minimum 3-second delay to build anticipation
+
+### Screen 3: Preview + Monetization (this is where conversion happens)
+- Display transformed image WITH subtle watermark
+- Clear pricing tiers below:
+
+  FREE: Watermarked download [Download button - no sign-in needed]
+  
+  HD NO WATERMARK: $19 [Sign in to purchase]
+  
+  MUSEUM-QUALITY PRINT: $79 [Sign in to purchase]
+  - Archival paper, fade-resistant inks
+  - Free shipping
+  
+- Separator line, then upsell block:
+  
+  "✨ Want a REAL Hand-Painted Masterpiece?"
+  "Our master artists create museum-quality oil paintings from your photo"
+  "From $149 • 7-10 day delivery • Worldwide shipping"
+  [Explore Hand-Painted Options →] (links to portraits.art-and-see.com)
+
+### Screen 4: Try Another Style
+- After download, prompt: "Try another style?" with style pills
+- Keep them in the loop, increase engagement
+
+## DESIGN DIRECTION:
+- Clean, premium, minimal (like Fable)
+- Dark or light theme that feels gallery/art-world
+- Mobile-first
+- Trust badges and social proof ONLY on pricing screen, not before
+
+## TECH NOTES:
+- Preserve existing AI transformation backend/API
+- Sign-in only triggered for paid options
+- Track: uploads, style selections, download clicks, upsell clicks (for analytics)
+
+## BRAND:
+- Part of Art & See (art-and-see.com)
+- Premium positioning - we sell real paintings, this tool is the top of funnel
