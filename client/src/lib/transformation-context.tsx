@@ -11,15 +11,18 @@ interface TransformationData {
 interface TransformationContextType {
   transformationData: TransformationData | null;
   setTransformationData: (data: TransformationData | null) => void;
+  pendingStyle: ArtStyle | null;
+  setPendingStyle: (style: ArtStyle | null) => void;
 }
 
 const TransformationContext = createContext<TransformationContextType | undefined>(undefined);
 
 export function TransformationProvider({ children }: { children: ReactNode }) {
   const [transformationData, setTransformationData] = useState<TransformationData | null>(null);
+  const [pendingStyle, setPendingStyle] = useState<ArtStyle | null>(null);
 
   return (
-    <TransformationContext.Provider value={{ transformationData, setTransformationData }}>
+    <TransformationContext.Provider value={{ transformationData, setTransformationData, pendingStyle, setPendingStyle }}>
       {children}
     </TransformationContext.Provider>
   );

@@ -1,43 +1,30 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Upload, Image as ImageIcon, X, Sparkles, Check, Crown, LogIn } from "lucide-react";
+import { Upload, Sparkles, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { allStyles, styleData } from "@/lib/styles";
-import { ProgressStepper, type StepId } from "@/components/progress-stepper";
+import { ProgressStepper } from "@/components/progress-stepper";
 import { useTransformation } from "@/lib/transformation-context";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import type { ArtStyle } from "@shared/schema";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
-  const { setTransformationData } = useTransformation();
+  const { setTransformationData, pendingStyle, setPendingStyle } = useTransformation();
   const { toast } = useToast();
-  const { user, isAuthenticated, isLoading } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<ArtStyle | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<ArtStyle>(pendingStyle || "oil-painting");
   const [isTransforming, setIsTransforming] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [outOfCreditsOpen, setOutOfCreditsOpen] = useState(false);
-  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
 
-
-  const currentStep: StepId = selectedFile ? (selectedStyle ? "transform" : "choose") : "upload";
-  const completedSteps: StepId[] = [];
-  if (selectedFile) completedSteps.push("upload");
-  if (selectedStyle) completedSteps.push("choose");
+  useEffect(() => {
+    if (pendingStyle) {
+      setSelectedStyle(pendingStyle);
+      setPendingStyle(null);
+    }
+  }, [pendingStyle, setPendingStyle]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,6 +32,7 @@ export default function Dashboard() {
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      handleTransform(file, url);
     }
   };
 
@@ -55,26 +43,12 @@ export default function Dashboard() {
       setSelectedFile(file);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
+      handleTransform(file, url);
     }
   };
 
-  const handleRemove = () => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setSelectedStyle(null);
-  };
-
-  const handleTransform = async () => {
-    if (!selectedFile || !selectedStyle || !previewUrl) return;
-
-    // Check if user is authenticated before transforming
-    if (!isAuthenticated) {
-      setLoginPromptOpen(true);
-      return;
-    }
+  const handleTransform = async (file: File, url: string) => {
+    if (!file || !selectedStyle) return;
 
     setIsTransforming(true);
     setProgress(0);
@@ -88,7 +62,7 @@ export default function Dashboard() {
       const imageDataUrl = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
+        reader.readAsDataURL(file);
       });
 
       progressInterval = setInterval(() => {
@@ -109,34 +83,6 @@ export default function Dashboard() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        
-        if (response.status === 403 && errorData.error?.includes("Insufficient credits")) {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-          }
-          setIsTransforming(false);
-          setProgress(0);
-          setOutOfCreditsOpen(true);
-          return;
-        }
-        
-        if (response.status === 401) {
-          if (progressInterval) {
-            clearInterval(progressInterval);
-          }
-          setIsTransforming(false);
-          setProgress(0);
-          toast({
-            title: "Session expired",
-            description: "Please sign in again.",
-            variant: "destructive",
-          });
-          setTimeout(() => {
-            window.location.href = "/api/auth/google";
-          }, 500);
-          return;
-        }
-        
         throw new Error(errorData.error || "Transformation failed");
       }
 
@@ -151,21 +97,17 @@ export default function Dashboard() {
           const checkStatus = async () => {
             try {
               attempts++;
-              console.log(`[Polling] Attempt ${attempts}/${maxAttempts} for transformation ${transformationId}`);
               
               const statusResponse = await fetch(`/api/transform/${transformationId}`);
               
               if (!statusResponse.ok) {
-                console.error(`[Polling] Status check failed:`, statusResponse.status);
                 reject(new Error("Failed to check transformation status"));
                 return;
               }
 
               const transformation = await statusResponse.json();
-              console.log(`[Polling] Transformation status:`, transformation.status);
 
               if (transformation.status === "completed") {
-                console.log(`[Polling] Transformation completed! Redirecting to result page...`);
                 if (progressInterval) {
                   clearInterval(progressInterval);
                   progressInterval = null;
@@ -185,17 +127,13 @@ export default function Dashboard() {
                 
                 resolve();
               } else if (transformation.status === "failed") {
-                console.error(`[Polling] Transformation failed`);
                 reject(new Error("Transformation failed on server"));
               } else if (attempts < maxAttempts) {
-                console.log(`[Polling] Status is "${transformation.status}", polling again in 300ms...`);
                 setTimeout(checkStatus, 300);
               } else {
-                console.error(`[Polling] Timeout after ${maxAttempts} attempts`);
                 reject(new Error("Transformation timeout"));
               }
             } catch (error) {
-              console.error(`[Polling] Error during status check:`, error);
               reject(error);
             }
           };
@@ -212,6 +150,8 @@ export default function Dashboard() {
       }
       setIsTransforming(false);
       setProgress(0);
+      setSelectedFile(null);
+      setPreviewUrl(null);
       toast({
         title: "Transformation failed",
         description: error instanceof Error ? error.message : "An error occurred while transforming your image. Please try again.",
@@ -221,267 +161,138 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-card/20">
-      <div className="container px-4 py-8 mx-auto">
-        <div className="mb-12">
-          <ProgressStepper currentStep={currentStep} completedSteps={completedSteps} />
+    <div className="min-h-screen bg-background">
+      <div className="container px-4 py-8 mx-auto max-w-4xl">
+        <div className="mb-8">
+          <ProgressStepper currentStep="upload" />
         </div>
 
-        <div className="grid lg:grid-cols-[300px_1fr] gap-6 max-w-7xl mx-auto">
-          <aside className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Choose Your Style</h3>
-              <div className="space-y-2">
-                {allStyles.map((style) => (
-                  <Card
-                    key={style.id}
-                    className={cn(
-                      "cursor-pointer transition-all hover-elevate",
-                      selectedStyle === style.id && "ring-2 ring-primary border-primary"
-                    )}
-                    onClick={() => setSelectedStyle(style.id)}
-                    data-testid={`card-select-style-${style.id}`}
-                  >
-                    <div className="flex gap-3 p-3">
-                      <div className="w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                        <img
-                          src={style.image}
-                          alt={style.name}
-                          className="w-full h-full object-cover"
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 font-serif italic">
+            Transform Your Photo
+            <br />
+            Into Art
+          </h1>
+          <p className="text-muted-foreground">
+            Free Preview · From $19 to purchase
+          </p>
+        </div>
+
+        <div className="border rounded-xl p-6 mb-8 bg-card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Pick Style</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mb-6">
+            {allStyles.map((style) => (
+              <button
+                key={style.id}
+                onClick={() => setSelectedStyle(style.id)}
+                className={cn(
+                  "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                  selectedStyle === style.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover-elevate"
+                )}
+                data-testid={`button-style-${style.id}`}
+              >
+                {style.name}
+              </button>
+            ))}
+          </div>
+
+          {!isTransforming ? (
+            <div
+              className="border-2 border-dashed rounded-xl p-12 text-center hover-elevate transition-all cursor-pointer"
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => document.getElementById("file-input")?.click()}
+              data-testid="dropzone-upload"
+            >
+              <div className="flex flex-col items-center gap-4 max-w-md mx-auto">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">
+                    Upload your photo
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Use a well-lit photo for best results
+                  </p>
+                </div>
+                <input
+                  id="file-input"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  data-testid="input-file"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl overflow-hidden bg-muted">
+              <div className="relative aspect-square max-w-lg mx-auto">
+                {previewUrl && (
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover opacity-50"
+                    data-testid="img-preview"
+                  />
+                )}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center space-y-4 p-6">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto animate-pulse">
+                      <Sparkles className="w-8 h-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">
+                        Creating your masterpiece...
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Applying {styleData[selectedStyle]?.name} style
+                      </p>
+                      <div className="w-48 bg-background/50 rounded-full h-2 mb-2 overflow-hidden mx-auto">
+                        <div
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="font-semibold text-sm truncate">{style.name}</h4>
-                          {selectedStyle === style.id && (
-                            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                              <Check className="w-3 h-3 text-primary-foreground" />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                          {style.description}
-                        </p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">{progress}%</p>
                     </div>
-                  </Card>
-                ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </aside>
+          )}
+        </div>
 
-          <main>
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <CardTitle>Upload Your Photo</CardTitle>
-                    <CardDescription>
-                      Choose a photo to transform into stunning artwork
-                    </CardDescription>
-                  </div>
-                  {selectedFile && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRemove}
-                      data-testid="button-remove-image"
-                    >
-                      <X className="w-4 h-4 mr-2" />
-                      Remove
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {!selectedFile ? (
-                  <div
-                    className="border-2 border-dashed rounded-xl p-12 text-center hover-elevate transition-all cursor-pointer"
-                    onDrop={handleDrop}
-                    onDragOver={(e) => e.preventDefault()}
-                    onClick={() => document.getElementById("file-input")?.click()}
-                    data-testid="dropzone-upload"
-                  >
-                    <div className="flex flex-col items-center gap-4 max-w-md mx-auto">
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Upload className="w-8 h-8 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">
-                          Drop your image here, or click to browse
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          Supports JPG, PNG, WEBP up to 10MB
-                        </p>
-                      </div>
-                      <input
-                        id="file-input"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileSelect}
-                        data-testid="input-file"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="relative rounded-xl overflow-hidden bg-muted">
-                      <img
-                        src={previewUrl!}
-                        alt="Preview"
-                        className="w-full h-auto"
-                        data-testid="img-preview"
-                      />
-                      {isTransforming && (
-                        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-                          <div className="text-center space-y-4 max-w-sm p-6">
-                            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto animate-pulse">
-                              <Sparkles className="w-8 h-8 text-primary" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-semibold mb-2">
-                                Creating Your Artwork
-                              </h3>
-                              <p className="text-sm text-muted-foreground mb-4">
-                                Applying{" "}
-                                {allStyles.find((s) => s.id === selectedStyle)?.name}{" "}
-                                style...
-                              </p>
-                              <div className="w-full bg-muted rounded-full h-2 mb-2 overflow-hidden">
-                                <div
-                                  className="h-full bg-primary transition-all duration-300"
-                                  style={{ width: `${progress}%` }}
-                                />
-                              </div>
-                              <p className="text-xs text-muted-foreground">{progress}%</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
+        <p className="text-center text-sm text-muted-foreground mb-12">
+          Free preview · No signup required
+        </p>
 
-                    {!isTransforming && (
-                      <div className="flex items-center gap-3">
-                        <Badge variant="secondary" className="gap-1.5">
-                          <ImageIcon className="w-3 h-3" />
-                          {selectedFile.name}
-                        </Badge>
-                        <Badge variant="secondary">
-                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {selectedFile && !isTransforming && (
-              <div className="mt-6 flex justify-center">
-                <Button
-                  size="lg"
-                  onClick={handleTransform}
-                  disabled={!selectedStyle}
-                  data-testid="button-transform"
-                >
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  Transform into {selectedStyle && allStyles.find((s) => s.id === selectedStyle)?.name}
-                </Button>
-              </div>
-            )}
-          </main>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {allStyles.slice(0, 3).map((style) => (
+            <div
+              key={style.id}
+              className="aspect-[3/4] rounded-xl overflow-hidden hover-elevate cursor-pointer"
+              onClick={() => setSelectedStyle(style.id)}
+              data-testid={`gallery-${style.id}`}
+            >
+              <img
+                src={style.image}
+                alt={style.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
         </div>
       </div>
-
-      {/* Login Prompt Modal */}
-      <Dialog open={loginPromptOpen} onOpenChange={setLoginPromptOpen}>
-        <DialogContent data-testid="dialog-login-prompt">
-          <DialogHeader>
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
-              <LogIn className="w-8 h-8 text-primary" />
-            </div>
-            <DialogTitle className="text-center text-2xl">Sign In Required</DialogTitle>
-            <DialogDescription className="text-center">
-              Please sign in with Google to transform your photos into stunning artwork. You'll get 3 free credits to start!
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-card border rounded-lg p-4">
-              <h4 className="font-semibold mb-2">What you'll get:</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  3 free transformation credits
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  Access to all 6 artistic styles
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  High-quality AI transformations
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  Save and download your artwork
-                </li>
-              </ul>
-            </div>
-            <Button 
-              className="w-full" 
-              size="lg" 
-              onClick={() => { window.location.href = "/api/auth/google"; }}
-              data-testid="button-signin-google"
-            >
-              <LogIn className="w-4 h-4 mr-2" />
-              Sign In with Google
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Out of Credits Modal */}
-      <Dialog open={outOfCreditsOpen} onOpenChange={setOutOfCreditsOpen}>
-        <DialogContent data-testid="dialog-out-of-credits">
-          <DialogHeader>
-            <div className="flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mx-auto mb-4">
-              <Crown className="w-8 h-8 text-primary" />
-            </div>
-            <DialogTitle className="text-center text-2xl">Out of Credits</DialogTitle>
-            <DialogDescription className="text-center">
-              You've used all your free credits. Upgrade to continue transforming your photos into stunning artwork.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-card border rounded-lg p-4">
-              <h4 className="font-semibold mb-2">What you get with more credits:</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  Unlimited transformations
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  All 6 artistic styles
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  High-resolution downloads
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-primary" />
-                  Priority processing
-                </li>
-              </ul>
-            </div>
-            <Button className="w-full" size="lg" data-testid="button-upgrade">
-              <Crown className="w-4 h-4 mr-2" />
-              Upgrade Now
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

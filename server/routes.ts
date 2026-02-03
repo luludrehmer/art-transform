@@ -331,29 +331,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Protected transformation endpoint - requires auth and credits
-  app.post("/api/transform", isAuthenticated, async (req: any, res) => {
+  // Free transformation endpoint - no auth required for preview
+  app.post("/api/transform", async (req: any, res) => {
     try {
-      const userId = req.user.id;
-      
-      // Check if user has credits
-      const credits = await storage.getUserCredits(userId);
-      if (credits < 1) {
-        res.status(403).json({ error: "Insufficient credits. You need 1 credit to transform an image." });
-        return;
-      }
-
       const validatedData = insertTransformationSchema.parse(req.body);
       
       if (!validatedData.originalImageUrl || validatedData.originalImageUrl.length === 0) {
         res.status(400).json({ error: "Original image is required" });
-        return;
-      }
-
-      // Deduct credit before processing
-      const deducted = await storage.deductCredits(userId, 1);
-      if (!deducted) {
-        res.status(403).json({ error: "Failed to deduct credits" });
         return;
       }
 
