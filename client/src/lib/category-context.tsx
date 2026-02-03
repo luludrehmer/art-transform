@@ -1,13 +1,15 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { useLocation } from "wouter";
 
-export type Category = "pets" | "family" | "kids";
+export type Category = "pets" | "family" | "kids" | "couples" | "self-portrait";
 
 const categoryRoutes: Record<string, Category> = {
   "/": "pets",
   "/pets": "pets",
   "/family": "family",
   "/kids": "kids",
+  "/couples": "couples",
+  "/self-portrait": "self-portrait",
 };
 
 interface CategoryContextType {

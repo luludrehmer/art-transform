@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Sparkles, Crown, LogIn, LogOut, User, PawPrint, Users, Smile } from "lucide-react";
+import { Sparkles, Crown, LogOut, User, PawPrint, Users, Smile, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,11 +15,13 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useCategory } from "@/lib/category-context";
 import { cn } from "@/lib/utils";
+import { NavigationDrawer, MenuButton } from "./navigation-drawer";
 
 export function Header() {
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const { activeCategory, setActiveCategory } = useCategory();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -74,6 +77,32 @@ export function Header() {
             <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs bg-amber-400 text-amber-900">
               New
             </Badge>
+          </Button>
+          <Button
+            variant={activeCategory === "couples" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "rounded-full gap-2",
+              activeCategory !== "couples" && "text-muted-foreground"
+            )}
+            onClick={() => setActiveCategory("couples")}
+            data-testid="button-category-couples"
+          >
+            <Heart className="w-4 h-4" />
+            Couples
+          </Button>
+          <Button
+            variant={activeCategory === "self-portrait" ? "default" : "ghost"}
+            size="sm"
+            className={cn(
+              "rounded-full gap-2",
+              activeCategory !== "self-portrait" && "text-muted-foreground"
+            )}
+            onClick={() => setActiveCategory("self-portrait")}
+            data-testid="button-category-self-portrait"
+          >
+            <User className="w-4 h-4" />
+            Self
           </Button>
         </nav>
 
@@ -136,20 +165,13 @@ export function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          ) : (
-            <Button 
-              asChild
-              size="sm" 
-              data-testid="button-signin"
-            >
-              <a href="/api/auth/google">
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign In with Google
-              </a>
-            </Button>
-          )}
+          ) : null}
+
+          <MenuButton onClick={() => setDrawerOpen(true)} />
         </div>
       </div>
+
+      <NavigationDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </header>
   );
 }

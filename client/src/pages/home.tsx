@@ -32,6 +32,12 @@ import family3 from "@/assets/images/family-3.png";
 import kids1 from "@/assets/images/kids-1.png";
 import kids2 from "@/assets/images/kids-2.png";
 import kids3 from "@/assets/images/kids-3.png";
+import couples1 from "@/assets/images/couples-1.png";
+import couples2 from "@/assets/images/couples-2.png";
+import couples3 from "@/assets/images/couples-3.png";
+import self1 from "@/assets/images/self-1.png";
+import self2 from "@/assets/images/self-2.png";
+import self3 from "@/assets/images/self-3.png";
 
 type FlowStep = "upload" | "preview" | "download";
 
@@ -62,6 +68,20 @@ const categoryContent: Record<Category, {
     uploadText: "Upload a photo of your child",
     images: [kids1, kids2, kids3],
     trustText: "#1 in Kids Portraits",
+  },
+  couples: {
+    headline: "Romantic Portraits\nFor Two",
+    subheadline: "Free Preview · From $29 to purchase",
+    uploadText: "Upload a photo of you and your partner",
+    images: [couples1, couples2, couples3],
+    trustText: "#1 in Couple Portraits",
+  },
+  "self-portrait": {
+    headline: "Your Personal\nMasterpiece",
+    subheadline: "Free Preview · From $29 to purchase",
+    uploadText: "Upload a photo of yourself",
+    images: [self1, self2, self3],
+    trustText: "#1 in Self-Portraits",
   },
 };
 

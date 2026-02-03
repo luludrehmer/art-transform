@@ -9,6 +9,13 @@ import { Header } from "@/components/header";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Result from "@/pages/result";
+import Pricing from "@/pages/pricing";
+import About from "@/pages/about";
+import Support from "@/pages/support";
+import Privacy from "@/pages/privacy";
+import Terms from "@/pages/terms";
+import Refunds from "@/pages/refunds";
+import SignIn from "@/pages/signin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -18,6 +25,15 @@ function Router() {
       <Route path="/pets" component={Home} />
       <Route path="/family" component={Home} />
       <Route path="/kids" component={Home} />
+      <Route path="/couples" component={Home} />
+      <Route path="/self-portrait" component={Home} />
+      <Route path="/pricing" component={Pricing} />
+      <Route path="/about" component={About} />
+      <Route path="/support" component={Support} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/refunds" component={Refunds} />
+      <Route path="/signin" component={SignIn} />
       <Route path="/tools/dashboard" component={Dashboard} />
       <Route path="/result" component={Result} />
       {/* Legacy redirects */}
