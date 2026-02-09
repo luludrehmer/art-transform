@@ -5,10 +5,20 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
+    "dev:fresh": "lsof -ti:5001 | xargs kill -9 2>/dev/null; npm run dev",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "regenerate-gallery": "tsx scripts/regenerate-gallery.ts",
+    "generate-gallery": "tsx scripts/regenerate-gallery.ts",
+    "medusa-seed": "tsx scripts/medusa-seed-products.ts",
+    "medusa-setup-stock-location": "tsx scripts/medusa-setup-stock-location.ts",
+    "medusa-diagnose": "tsx scripts/medusa-diagnose-variants.ts",
+    "medusa-fix-variant-inventory": "tsx scripts/medusa-fix-variant-inventory.ts",
+    "medusa-verify-metadata": "tsx scripts/verify-medusa-line-item-metadata.ts",
+    "migrate:images-to-imgbb": "tsx scripts/migrate-images-to-imgbb.ts",
+    "update-browserslist": "npx update-browserslist-db@latest"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -51,6 +61,7 @@
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.4",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
@@ -73,6 +84,7 @@
     "react-icons": "^5.4.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
+    "sharp": "^0.34.5",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.2.5",

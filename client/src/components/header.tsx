@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Sparkles, Crown, LogOut, User, PawPrint, Users, Smile, Heart } from "lucide-react";
+import { Crown, LogOut, User, PawPrint, Users, Smile, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,89 +26,93 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { activeCategory, setActiveCategory } = useCategory();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container relative flex h-16 items-center justify-between gap-4 px-4">
-        <Link href="/" data-testid="link-home">
-          <div className="flex items-center gap-3 hover-elevate active-elevate-2 rounded-md px-3 py-2 -ml-3">
-            <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">ArtTransform</span>
-          </div>
+    <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+      <div className="mx-auto grid h-16 max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="justify-self-start" data-testid="link-home">
+          <img
+            src="/logo3.png"
+            alt="Shooting Star"
+            className="h-[3.8rem] w-auto object-contain"
+          />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full border bg-muted/50 absolute left-1/2 -translate-x-1/2">
-          <Button
-            variant={activeCategory === "pets" ? "default" : "ghost"}
-            size="sm"
-            className={cn(
-              "rounded-full gap-2",
-              activeCategory !== "pets" && "text-muted-foreground"
-            )}
-            onClick={() => setActiveCategory("pets")}
-            data-testid="button-category-pets"
-          >
-            <PawPrint className="w-4 h-4" />
-            Pets
-          </Button>
-          <Button
-            variant={activeCategory === "family" ? "default" : "ghost"}
-            size="sm"
-            className={cn(
-              "rounded-full gap-2",
-              activeCategory !== "family" && "text-muted-foreground"
-            )}
-            onClick={() => setActiveCategory("family")}
-            data-testid="button-category-family"
-          >
-            <Users className="w-4 h-4" />
-            Family
-          </Button>
-          <Button
-            variant={activeCategory === "kids" ? "default" : "ghost"}
-            size="sm"
-            className={cn(
-              "rounded-full gap-2",
-              activeCategory !== "kids" && "text-muted-foreground"
-            )}
-            onClick={() => setActiveCategory("kids")}
-            data-testid="button-category-kids"
-          >
-            <Smile className="w-4 h-4" />
-            Kids
-            <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs bg-amber-400 text-amber-900">
-              New
-            </Badge>
-          </Button>
-          <Button
-            variant={activeCategory === "couples" ? "default" : "ghost"}
-            size="sm"
-            className={cn(
-              "rounded-full gap-2",
-              activeCategory !== "couples" && "text-muted-foreground"
-            )}
-            onClick={() => setActiveCategory("couples")}
-            data-testid="button-category-couples"
-          >
-            <Heart className="w-4 h-4" />
-            Couples
-          </Button>
-          <Button
-            variant={activeCategory === "self-portrait" ? "default" : "ghost"}
-            size="sm"
-            className={cn(
-              "rounded-full gap-2",
-              activeCategory !== "self-portrait" && "text-muted-foreground"
-            )}
-            onClick={() => setActiveCategory("self-portrait")}
-            data-testid="button-category-self-portrait"
-          >
-            <User className="w-4 h-4" />
-            Self
-          </Button>
+        <nav
+          className="hidden md:flex items-center justify-center"
+          aria-label="Categories"
+        >
+          <div className="flex items-center gap-1 rounded-full border bg-nav-pill-bg p-1">
+            <Button
+              variant={activeCategory === "pets" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "rounded-full gap-2",
+                activeCategory !== "pets" && "text-muted-foreground"
+              )}
+              onClick={() => setActiveCategory("pets")}
+              data-testid="button-category-pets"
+            >
+              <PawPrint className="w-4 h-4" />
+              Pets
+              <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs bg-amber-400 text-amber-900">
+                New
+              </Badge>
+            </Button>
+            <Button
+              variant={activeCategory === "family" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "rounded-full gap-2",
+                activeCategory !== "family" && "text-muted-foreground"
+              )}
+              onClick={() => setActiveCategory("family")}
+              data-testid="button-category-family"
+            >
+              <Users className="w-4 h-4" />
+              Family
+            </Button>
+            <Button
+              variant={activeCategory === "kids" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "rounded-full gap-2",
+                activeCategory !== "kids" && "text-muted-foreground"
+              )}
+              onClick={() => setActiveCategory("kids")}
+              data-testid="button-category-kids"
+            >
+              <Smile className="w-4 h-4" />
+              Kids
+            </Button>
+            <Button
+              variant={activeCategory === "couples" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "rounded-full gap-2",
+                activeCategory !== "couples" && "text-muted-foreground"
+              )}
+              onClick={() => setActiveCategory("couples")}
+              data-testid="button-category-couples"
+            >
+              <Heart className="w-4 h-4" />
+              Couples
+            </Button>
+            <Button
+              variant={activeCategory === "self-portrait" ? "default" : "ghost"}
+              size="sm"
+              className={cn(
+                "rounded-full gap-2",
+                activeCategory !== "self-portrait" && "text-muted-foreground"
+              )}
+              onClick={() => setActiveCategory("self-portrait")}
+              data-testid="button-category-self-portrait"
+            >
+              <User className="w-4 h-4" />
+              Self
+            </Button>
+          </div>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex justify-self-end items-center gap-3">
           {isAuthenticated && user && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border bg-card">
               <Crown className="w-4 h-4 text-primary" />

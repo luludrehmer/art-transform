@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400;1,600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -14,62 +16,87 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  --background: 0 0% 100%;
-  --foreground: 220 13% 13%;
-  --border: 220 13% 88%;
-  --card: 0 0% 98%;
-  --card-foreground: 220 13% 13%;
-  --card-border: 220 13% 91%;
-  --sidebar: 220 13% 96%;
-  --sidebar-foreground: 220 13% 13%;
-  --sidebar-border: 220 13% 90%;
-  --sidebar-primary: 347 77% 56%;
+  /* Art & See palette: warm cream base, elevated card surfaces */
+  --background: 30 33% 93%;
+  --foreground: 36 21% 20%;
+  --nav-pill-bg: 36 33% 92%;
+  --border: 36 25% 78%;
+  --card: 40 67% 98%;
+  --card-foreground: 36 21% 20%;
+  --card-border: 36 25% 78%;
+  --sidebar: 36 33% 97%;
+  --sidebar-foreground: 36 21% 20%;
+  --sidebar-border: 36 25% 78%;
+  --sidebar-primary: 120 49% 20%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 13% 93%;
-  --sidebar-accent-foreground: 220 13% 13%;
-  --sidebar-ring: 347 77% 56%;
-  --popover: 220 13% 95%;
-  --popover-foreground: 220 13% 13%;
-  --popover-border: 220 13% 89%;
-  --primary: 347 77% 56%;
+  --sidebar-accent: 36 33% 92%;
+  --sidebar-accent-foreground: 36 21% 20%;
+  --sidebar-ring: 120 49% 20%;
+  --popover: 40 67% 98%;
+  --popover-foreground: 36 21% 20%;
+  --popover-border: 36 22% 88%;
+  --primary: 120 49% 20%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 13% 92%;
-  --secondary-foreground: 220 13% 13%;
-  --muted: 220 13% 94%;
-  --muted-foreground: 220 9% 46%;
-  --accent: 220 11% 91%;
-  --accent-foreground: 220 13% 13%;
+  --secondary: 36 33% 95%;
+  --secondary-foreground: 36 21% 20%;
+  --muted: 36 33% 92%;
+  --muted-foreground: 36 16% 36%;
+  --accent: 36 25% 89%;
+  --accent-foreground: 36 21% 20%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --input: 220 13% 82%;
-  --ring: 347 77% 56%;
-  --chart-1: 347 77% 56%;
+  --input: 36 22% 82%;
+  --ring: 120 49% 20%;
+  --chart-1: 120 49% 28%;
   --chart-2: 280 65% 60%;
   --chart-3: 200 80% 45%;
   --chart-4: 160 60% 45%;
   --chart-5: 45 85% 55%;
 
   --font-sans: Inter, sans-serif;
-  --font-serif: Georgia, serif;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-display: 'Fraunces', Georgia, serif;
   --font-mono: Menlo, monospace;
+
+  /* Display typography – optical size, tracking, features */
+  --display-tracking: -0.02em;
+  --display-tracking-tight: -0.03em;
+  --display-opsz: 72;
+  --display-opsz-lg: 96;
   --radius: .5rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(220 13% 13% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(220 13% 13% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(220 13% 13% / 0.00), 0px 1px 2px -1px hsl(220 13% 13% / 0.05);
-  --shadow: 0px 2px 0px 0px hsl(220 13% 13% / 0.00), 0px 1px 2px -1px hsl(220 13% 13% / 0.08);
-  --shadow-md: 0px 2px 0px 0px hsl(220 13% 13% / 0.00), 0px 2px 4px -1px hsl(220 13% 13% / 0.10);
-  --shadow-lg: 0px 2px 0px 0px hsl(220 13% 13% / 0.00), 0px 4px 6px -1px hsl(220 13% 13% / 0.10);
-  --shadow-xl: 0px 2px 0px 0px hsl(220 13% 13% / 0.00), 0px 8px 10px -1px hsl(220 13% 13% / 0.10);
-  --shadow-2xl: 0px 2px 0px 0px hsl(220 13% 13% / 0.00);
+
+  /* Art & See card/button shadows & effects – foreground tint for hierarchy */
+  --card-shadow: 0px 1px 3px rgba(61,52,40,0.1), 0px 0px 1px rgba(61,52,40,0.06);
+  --card-shadow-hover: 0px 2px 6px rgba(61,52,40,0.1), 0px 1px 2px rgba(61,52,40,0.06);
+  --card-shadow-selected: 0px 2px 6px rgba(26,77,26,0.1), 0px 1px 2px rgba(26,77,26,0.06);
+  --button-primary-shadow: 0px 2px 6px rgba(26,77,26,0.2);
+  --button-primary-shadow-hover: 0px 3px 8px rgba(26,77,26,0.3);
+  --card-border-opacity: 0.7;
+  --card-hover-border-opacity: 0.4;
+  --primary-tint: 120 25% 94%;
+  --secondary-hover: 36 25% 89%;
+  --input-border: 36 15% 76%;
+  --announcement-bg: 36 25% 90%;
+  --announcement-bar: 18 28% 22%;
+  --announcement-bar-foreground: 36 25% 94%;
+
+  --shadow-2xs: 0px 2px 0px 0px hsl(36 21% 20% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(36 21% 20% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(36 21% 20% / 0.00), 0px 1px 2px -1px hsl(36 21% 20% / 0.05);
+  --shadow: 0px 2px 0px 0px hsl(36 21% 20% / 0.00), 0px 1px 2px -1px hsl(36 21% 20% / 0.08);
+  --shadow-md: 0px 2px 0px 0px hsl(36 21% 20% / 0.00), 0px 2px 4px -1px hsl(36 21% 20% / 0.10);
+  --shadow-lg: 0px 2px 0px 0px hsl(36 21% 20% / 0.00), 0px 4px 6px -1px hsl(36 21% 20% / 0.10);
+  --shadow-xl: 0px 2px 0px 0px hsl(36 21% 20% / 0.00), 0px 8px 10px -1px hsl(36 21% 20% / 0.10);
+  --shadow-2xl: 0px 2px 0px 0px hsl(36 21% 20% / 0.00);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
-  --gradient-primary: linear-gradient(135deg, hsl(347 77% 56%) 0%, hsl(347 77% 66%) 100%);
-  --gradient-hero: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(347 77% 98%) 100%);
-  --gradient-card: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(347 77% 99%) 100%);
-  --gradient-glow: radial-gradient(circle at 50% 0%, hsl(347 77% 56% / 0.08) 0%, transparent 60%);
+  --gradient-primary: linear-gradient(135deg, hsl(120 49% 20%) 0%, hsl(120 49% 28%) 100%);
+  --gradient-hero: linear-gradient(180deg, hsl(30 33% 93%) 0%, hsl(40 67% 98%) 100%);
+  --gradient-card: linear-gradient(135deg, hsl(40 67% 98%) 0%, hsl(36 33% 97%) 100%);
+  --gradient-glow: radial-gradient(circle at 50% 0%, hsl(120 49% 20% / 0.08) 0%, transparent 60%);
   
-  --shadow-glow: 0 0 24px hsl(347 77% 56% / 0.15);
+  --shadow-glow: 0 0 24px hsl(120 49% 20% / 0.15);
   
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -107,36 +134,36 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 220 13% 9%;
-  --foreground: 220 13% 95%;
-  --border: 220 13% 18%;
-  --card: 220 13% 11%;
-  --card-foreground: 220 13% 95%;
-  --card-border: 220 13% 15%;
-  --sidebar: 220 13% 13%;
-  --sidebar-foreground: 220 13% 95%;
-  --sidebar-border: 220 13% 17%;
-  --sidebar-primary: 347 77% 60%;
+  --background: 36 21% 9%;
+  --foreground: 36 20% 95%;
+  --border: 36 15% 22%;
+  --card: 36 21% 12%;
+  --card-foreground: 36 20% 95%;
+  --card-border: 36 15% 18%;
+  --sidebar: 36 21% 14%;
+  --sidebar-foreground: 36 20% 95%;
+  --sidebar-border: 36 15% 20%;
+  --sidebar-primary: 120 49% 28%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 13% 16%;
-  --sidebar-accent-foreground: 220 13% 95%;
-  --sidebar-ring: 347 77% 60%;
-  --popover: 220 13% 14%;
-  --popover-foreground: 220 13% 95%;
-  --popover-border: 220 13% 18%;
-  --primary: 347 77% 60%;
+  --sidebar-accent: 36 15% 18%;
+  --sidebar-accent-foreground: 36 20% 95%;
+  --sidebar-ring: 120 49% 28%;
+  --popover: 36 21% 14%;
+  --popover-foreground: 36 20% 95%;
+  --popover-border: 36 15% 20%;
+  --primary: 120 49% 28%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 13% 17%;
-  --secondary-foreground: 220 13% 95%;
-  --muted: 220 13% 15%;
-  --muted-foreground: 220 9% 64%;
-  --accent: 220 11% 18%;
-  --accent-foreground: 220 13% 95%;
+  --secondary: 36 15% 20%;
+  --secondary-foreground: 36 20% 95%;
+  --muted: 36 15% 18%;
+  --muted-foreground: 36 14% 64%;
+  --accent: 36 15% 22%;
+  --accent-foreground: 36 20% 95%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --input: 220 13% 28%;
-  --ring: 347 77% 60%;
-  --chart-1: 347 77% 65%;
+  --input: 36 15% 28%;
+  --ring: 120 49% 28%;
+  --chart-1: 120 49% 35%;
   --chart-2: 280 65% 70%;
   --chart-3: 200 80% 60%;
   --chart-4: 160 60% 55%;
@@ -151,12 +178,12 @@
   --shadow-xl: 0px 2px 0px 0px hsl(220 13% 95% / 0.00), 0px 8px 10px -1px hsl(220 13% 95% / 0.00);
   --shadow-2xl: 0px 2px 0px 0px hsl(220 13% 95% / 0.00);
 
-  --gradient-primary: linear-gradient(135deg, hsl(347 77% 60%) 0%, hsl(347 77% 70%) 100%);
-  --gradient-hero: linear-gradient(180deg, hsl(220 13% 11%) 0%, hsl(347 77% 15%) 100%);
-  --gradient-card: linear-gradient(135deg, hsl(220 13% 11%) 0%, hsl(347 77% 12%) 100%);
-  --gradient-glow: radial-gradient(circle at 50% 0%, hsl(347 77% 60% / 0.12) 0%, transparent 60%);
+  --gradient-primary: linear-gradient(135deg, hsl(120 49% 28%) 0%, hsl(120 49% 35%) 100%);
+  --gradient-hero: linear-gradient(180deg, hsl(36 21% 11%) 0%, hsl(120 49% 15%) 100%);
+  --gradient-card: linear-gradient(135deg, hsl(36 21% 11%) 0%, hsl(120 49% 12%) 100%);
+  --gradient-glow: radial-gradient(circle at 50% 0%, hsl(120 49% 28% / 0.12) 0%, transparent 60%);
   
-  --shadow-glow: 0 0 24px hsl(347 77% 60% / 0.2);
+  --shadow-glow: 0 0 24px hsl(120 49% 28% / 0.2);
 
   /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
   --sidebar-primary-border: hsl(var(--sidebar-primary));
@@ -191,7 +218,19 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-family: 'Fraunces', Georgia, serif !important;
+    font-feature-settings: "kern" 1, "liga" 1, "clig" 1, "calt" 1, "ss01" 1, "ss02" 1, "ss03" 1 !important;
+    letter-spacing: var(--display-tracking);
+    text-rendering: optimizeLegibility;
+  }
+
+  h1 {
+    font-weight: 600 !important;
+    letter-spacing: var(--display-tracking-tight);
+  }
+
+  h2, h3, h4, h5, h6 {
+    font-weight: 400 !important;
   }
 }
 
@@ -284,6 +323,28 @@
   .text-gradient {
     @apply bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent;
   }
+
+  .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-feature-settings: "kern" 1, "liga" 1, "clig" 1, "calt" 1, "ss01" 1, "ss02" 1, "ss03" 1;
+    letter-spacing: var(--display-tracking);
+    text-rendering: optimizeLegibility;
+  }
+
+  .font-display-hero {
+    letter-spacing: var(--display-tracking-tight);
+  }
+
+  /* Art & See card states */
+  .card-interactive {
+    @apply transition-all duration-200 cursor-pointer;
+  }
+  .card-interactive:hover {
+    @apply border-primary/40 shadow-card-hover;
+  }
+  .card-selected {
+    @apply bg-primary-tint border-2 border-primary shadow-card-selected;
+  }
 }
 
 @keyframes float {
@@ -310,5 +371,12 @@
   }
   100% {
     transform: translateX(200%);
+  }
+}
+
+/* Download protection: hide protected artwork when printing */
+@media print {
+  .protected-image {
+    display: none !important;
   }
 }

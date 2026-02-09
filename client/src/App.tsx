@@ -7,6 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { TransformationProvider } from "@/lib/transformation-context";
 import { CategoryProvider } from "@/lib/category-context";
 import { Header } from "@/components/header";
+import { AnnouncementBar } from "@/components/announcement-bar";
+import { Footer } from "@/components/footer";
 import { NavigationDrawer } from "@/components/navigation-drawer";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
@@ -59,8 +61,12 @@ function App() {
         <CategoryProvider>
           <TransformationProvider>
             <div className="min-h-screen flex flex-col">
+              <AnnouncementBar />
               <Header onMenuClick={() => setDrawerOpen(true)} />
-              <Router />
+              <main className="flex-1 w-full max-w-5xl mx-auto px-4">
+                <Router />
+              </main>
+              <Footer />
             </div>
             <NavigationDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
             <Toaster />

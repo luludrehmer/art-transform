@@ -46,3 +46,40 @@ export const styleData: Record<ArtStyle, StyleInfo> = {
 };
 
 export const allStyles = Object.values(styleData);
+
+/** Handmade card copy per medium (oil/acrylic = painted; pencil/charcoal = drawn; watercolor/pastel = mixed) */
+export const handmadeCardContent: Record<
+  ArtStyle,
+  { badge: string; tagline: string; bullets: string[] }
+> = {
+  "oil-painting": {
+    badge: "100% HAND-PAINTED",
+    tagline: "Real brushstrokes you can feel",
+    bullets: ["Painted by master artists", "Oil on Canvas – Hand-Painted", "Museum-grade Oil Painting", "Ready to hang"],
+  },
+  acrylic: {
+    badge: "100% HAND-PAINTED",
+    tagline: "Real brushstrokes you can feel",
+    bullets: ["Painted by master artists", "Acrylic on Canvas – Hand-Painted", "Museum-grade Acrylic Painting", "Ready to hang"],
+  },
+  "pencil-sketch": {
+    badge: "100% HAND-DRAWN",
+    tagline: "Real graphite strokes you can feel",
+    bullets: ["Drawn by master artists", "Graphite on Paper – Hand-Drawn", "Museum-grade Pencil Drawing", "Ready to hang"],
+  },
+  watercolor: {
+    badge: "100% HAND-PAINTED",
+    tagline: "Real watercolor washes you can feel",
+    bullets: ["Painted by master artists", "Watercolor on Paper – Hand-Painted", "Museum-grade Watercolor Painting", "Ready to hang"],
+  },
+  charcoal: {
+    badge: "100% HAND-DRAWN",
+    tagline: "Real charcoal strokes you can feel",
+    bullets: ["Drawn by master artists", "Charcoal on Paper – Hand-Drawn", "Museum-grade Charcoal Drawing", "Ready to hang"],
+  },
+  pastel: {
+    badge: "100% HAND-CRAFTED",
+    tagline: "Real pastel texture you can feel",
+    bullets: ["Crafted by master artists", "Pastel on Paper – Hand-Crafted", "Museum-grade Pastel Artwork", "Ready to hang"],
+  },
+};

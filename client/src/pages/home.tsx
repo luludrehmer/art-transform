@@ -15,72 +15,101 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Sparkles, Download, RefreshCw, Check, ExternalLink, Share2, Bookmark, Truck, Palette } from "lucide-react";
+import { Upload, Sparkles, Download, RefreshCw, Check, ExternalLink, Share2, Bookmark, Palette, Loader2 } from "lucide-react";
+import { FreeShippingBadge } from "@/components/free-shipping-badge";
+import { CheckoutRedirectOverlay } from "@/components/checkout-redirect-overlay";
+import { ProtectedImage } from "@/components/protected-image";
+import { USE_MEDUSA_PRODUCTS, getProductHandle, getCheckoutLocale } from "@/lib/medusa";
 import { cn } from "@/lib/utils";
-import { allStyles, styleData } from "@/lib/styles";
+import { allStyles, styleData, handmadeCardContent } from "@/lib/styles";
 import { addWatermark } from "@/lib/watermark";
+import { optimizeImageForUpload } from "@/lib/image-optimize";
 import { useToast } from "@/hooks/use-toast";
 import { useCategory, type Category } from "@/lib/category-context";
+import { galleryImages } from "@/lib/gallery-images";
+import { PRINT_SIZES } from "@/lib/print-prices";
 import type { ArtStyle } from "@shared/schema";
-
-import pets1 from "@/assets/images/pets-1.png";
-import pets2 from "@/assets/images/pets-2.png";
-import pets3 from "@/assets/images/pets-3.png";
-import family1 from "@/assets/images/family-1.png";
-import family2 from "@/assets/images/family-2.png";
-import family3 from "@/assets/images/family-3.png";
-import kids1 from "@/assets/images/kids-1.png";
-import kids2 from "@/assets/images/kids-2.png";
-import kids3 from "@/assets/images/kids-3.png";
-import couples1 from "@/assets/images/couples-1.png";
-import couples2 from "@/assets/images/couples-2.png";
-import couples3 from "@/assets/images/couples-3.png";
-import self1 from "@/assets/images/self-1.png";
-import self2 from "@/assets/images/self-2.png";
-import self3 from "@/assets/images/self-3.png";
 
 type FlowStep = "upload" | "preview" | "download";
 
+const HANDMADE_SIZE_ORDER = ["12x16", "18x24", "24x36", "40x60"] as const;
+const HANDMADE_SIZE_LABELS: Record<string, string> = {
+  "12x16": '12" x 16"',
+  "18x24": '18" x 24"',
+  "24x36": '24" x 36"',
+  "40x60": '40" x 60"',
+};
+
 const categoryContent: Record<Category, {
+  categoryTitle: string;
+  flowTagline: string;
   headline: string;
+  headlineLine1: string;
+  headlineLine2: string;
   subheadline: string;
+  step1Text: string;
   uploadText: string;
-  images: string[];
+  photoTip: string;
   trustText: string;
 }> = {
   pets: {
-    headline: "The Portrait\nYour Pet Deserves",
-    subheadline: "Free Preview · From $29 to purchase",
-    uploadText: "Upload one or more pet photos",
-    images: [pets1, pets2, pets3],
+    categoryTitle: "PET PORTRAITS",
+    flowTagline: "Upload → Preview → Download, Print or Paint it",
+    headline: "Your Pet, Transformed Into Art",
+    headlineLine1: "Your Pet,",
+    headlineLine2: "Transformed Into Art",
+    subheadline: "Preview Free · From $29 to purchase",
+    step1Text: "Choose Your Art Style",
+    uploadText: "Share Your Pet's Photo",
+    photoTip: "Clear, bright photos work best",
     trustText: "#1 in Pet Portraits",
   },
   family: {
-    headline: "Timeless Family\nPortraits",
-    subheadline: "Free Preview · From $29 to purchase",
-    uploadText: "Upload a family photo",
-    images: [family1, family2, family3],
+    categoryTitle: "FAMILY PORTRAITS",
+    flowTagline: "Upload → Preview → Download, Print or Paint it",
+    headline: "Family Portraits That Last Generations",
+    headlineLine1: "Family Portraits",
+    headlineLine2: "That Last Generations",
+    subheadline: "Preview Free · From $29 to purchase",
+    step1Text: "Choose Your Art Style",
+    uploadText: "Share Your Family Photo",
+    photoTip: "Clear, bright photos work best",
     trustText: "#1 in Family Portraits",
   },
   kids: {
-    headline: "Magical Portraits\nFor Little Ones",
-    subheadline: "Free Preview · From $29 to purchase",
-    uploadText: "Upload a photo of your child",
-    images: [kids1, kids2, kids3],
+    categoryTitle: "KIDS PORTRAITS",
+    flowTagline: "Upload → Preview → Download, Print or Paint it",
+    headline: "Childhood Moments Transformed Into Art",
+    headlineLine1: "Childhood Moments",
+    headlineLine2: "Transformed Into Art",
+    subheadline: "Preview Free · From $29 to purchase",
+    step1Text: "Choose Your Art Style",
+    uploadText: "Share Your Child's Photo",
+    photoTip: "Clear, bright photos work best",
     trustText: "#1 in Kids Portraits",
   },
   couples: {
-    headline: "Romantic Portraits\nFor Two",
-    subheadline: "Free Preview · From $29 to purchase",
-    uploadText: "Upload a photo of you and your partner",
-    images: [couples1, couples2, couples3],
+    categoryTitle: "COUPLE PORTRAITS",
+    flowTagline: "Upload → Preview → Download, Print or Paint it",
+    headline: "Your Love Story, Beautifully Painted",
+    headlineLine1: "Your Love Story,",
+    headlineLine2: "Beautifully Painted",
+    subheadline: "Preview Free · From $29 to purchase",
+    step1Text: "Choose Your Art Style",
+    uploadText: "Share Your Couple Photo",
+    photoTip: "Clear, bright photos work best",
     trustText: "#1 in Couple Portraits",
   },
   "self-portrait": {
-    headline: "Your Personal\nMasterpiece",
-    subheadline: "Free Preview · From $29 to purchase",
-    uploadText: "Upload a photo of yourself",
-    images: [self1, self2, self3],
+    categoryTitle: "SELF-PORTRAITS",
+    flowTagline: "Upload → Preview → Download, Print or Paint it",
+    headline: "You, Reimagined As Art",
+    headlineLine1: "You,",
+    headlineLine2: "Reimagined As Art",
+    subheadline: "Preview Free · From $29 to purchase",
+    step1Text: "Choose Your Art Style",
+    uploadText: "Share Your Photo",
+    photoTip: "Clear, bright photos work best",
     trustText: "#1 in Self-Portraits",
   },
 };
@@ -90,6 +119,46 @@ export default function Home() {
   const { activeCategory } = useCategory();
   const resultRef = useRef<HTMLDivElement>(null);
   const content = categoryContent[activeCategory];
+  const [priceData, setPriceData] = useState<{
+    digital?: Record<string, number>;
+    print?: Record<string, number>;
+    handmade?: Record<string, number>;
+    digitalOriginal?: number;
+  }>({});
+  const [pricesLoading, setPricesLoading] = useState(true);
+
+  // Fetch all prices from Medusa (via API) - prices from DB only, no fallbacks
+  useEffect(() => {
+    if (!USE_MEDUSA_PRODUCTS) {
+      setPriceData({});
+      setPricesLoading(false);
+      return;
+    }
+    const handle = getProductHandle(activeCategory);
+    setPricesLoading(true);
+    fetch(`/api/art-transform-prices?handle=${encodeURIComponent(handle)}`)
+      .then((r) => r.ok ? r.json() : Promise.reject(new Error("Failed to fetch prices")))
+      .then((data: { digital?: Record<string, number>; print?: Record<string, number>; handmade?: Record<string, number>; digitalOriginal?: number }) => {
+        setPriceData({
+          digital: data.digital ?? {},
+          print: data.print ?? {},
+          handmade: data.handmade ?? {},
+          digitalOriginal: data.digitalOriginal,
+        });
+      })
+      .catch(() => setPriceData({}))
+      .finally(() => setPricesLoading(false));
+  }, [activeCategory]);
+
+  const handmadeSizes = HANDMADE_SIZE_ORDER.map((value) => ({
+    value,
+    label: HANDMADE_SIZE_LABELS[value] ?? value,
+    price: priceData.handmade?.[value] ?? 0,
+  }));
+  const printSizes = PRINT_SIZES.map((s) => ({
+    ...s,
+    price: priceData.print?.[s.value] ?? 0,
+  }));
   
   const [currentStep, setCurrentStep] = useState<FlowStep>("upload");
   const [selectedStyle, setSelectedStyle] = useState<ArtStyle>("oil-painting");
@@ -99,9 +168,21 @@ export default function Home() {
   const [isTransforming, setIsTransforming] = useState(false);
   const [progress, setProgress] = useState(0);
   const [printSize, setPrintSize] = useState("8x10");
-  const [canvasSize, setCanvasSize] = useState("12x16");
-  const [isWatermarking, setIsWatermarking] = useState(false);
+  const [handmadeSize, setHandmadeSize] = useState("12x16");
   const [countdown, setCountdown] = useState(300);
+  const [transformTipIndex, setTransformTipIndex] = useState(0);
+  const [transformationId, setTransformationId] = useState<string | null>(null);
+  const [watermarkedDisplayUrl, setWatermarkedDisplayUrl] = useState<string | null>(null);
+  const [purchasingTier, setPurchasingTier] = useState<string | null>(null);
+  const [showCheckoutOverlay, setShowCheckoutOverlay] = useState(false);
+
+  const TRANSFORM_TIPS = [
+    "Analyzing your photo for best composition...",
+    "Applying authentic artist techniques...",
+    "Matching colors and brushstrokes...",
+    "Almost there — crafting your masterpiece...",
+    "Final touches — almost ready!",
+  ];
 
   useEffect(() => {
     if (currentStep === "preview" || currentStep === "download") {
@@ -111,6 +192,27 @@ export default function Home() {
       return () => clearInterval(timer);
     }
   }, [currentStep]);
+
+  useEffect(() => {
+    if (!transformedImage) return;
+    let cancelled = false;
+    addWatermark(transformedImage)
+      .then((url) => {
+        if (!cancelled) setWatermarkedDisplayUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setWatermarkedDisplayUrl(transformedImage);
+      });
+    return () => { cancelled = true; };
+  }, [transformedImage]);
+
+  useEffect(() => {
+    if (!isTransforming) return;
+    const tipInterval = setInterval(() => {
+      setTransformTipIndex((prev) => (prev + 1) % TRANSFORM_TIPS.length);
+    }, 4000);
+    return () => clearInterval(tipInterval);
+  }, [isTransforming]);
 
   const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -149,17 +251,45 @@ export default function Home() {
 
     try {
       const selectedStyleInfo = styleData[selectedStyle];
-      
-      const reader = new FileReader();
-      const imageDataUrl = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
 
       progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 8, 95));
-      }, 200);
+        setProgress((prev) => {
+          if (prev < 90) return Math.min(prev + 1.5, 90);
+          return prev;
+        });
+      }, 500);
+
+      let imageDataUrl: string;
+      let width: number;
+      let height: number;
+      try {
+        const optimized = await optimizeImageForUpload(file);
+        imageDataUrl = optimized.dataUrl;
+        width = optimized.width;
+        height = optimized.height;
+      } catch {
+        const reader = new FileReader();
+        imageDataUrl = await new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+          const img = new Image();
+          const objUrl = URL.createObjectURL(file);
+          img.onload = () => {
+            URL.revokeObjectURL(objUrl);
+            resolve({ width: img.width, height: img.height });
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(objUrl);
+            reject(new Error("Failed to load image"));
+          };
+          img.src = objUrl;
+        });
+        width = dims.width;
+        height = dims.height;
+      }
 
       const response = await fetch("/api/transform", {
         method: "POST",
@@ -168,6 +298,9 @@ export default function Home() {
           originalImageUrl: imageDataUrl,
           style: selectedStyle,
           status: "processing",
+          category: activeCategory,
+          width,
+          height,
         }),
       });
 
@@ -203,6 +336,7 @@ export default function Home() {
                 }
                 setProgress(100);
                 setTransformedImage(transformation.transformedImageUrl || selectedStyleInfo.image);
+                setTransformationId(transformationId);
                 setCurrentStep("preview");
                 setCountdown(300);
                 
@@ -212,7 +346,8 @@ export default function Home() {
                 
                 resolve();
               } else if (transformation.status === "failed") {
-                reject(new Error("Transformation failed on server"));
+                const msg = transformation.errorMessage || "Transformation failed on server";
+                reject(new Error(msg));
               } else if (attempts < maxAttempts) {
                 setTimeout(checkStatus, 300);
               } else {
@@ -233,6 +368,7 @@ export default function Home() {
       if (progressInterval) clearInterval(progressInterval);
       setIsTransforming(false);
       setProgress(0);
+      setTransformationId(null);
       setSelectedFile(null);
       setPreviewUrl(null);
       toast({
@@ -245,51 +381,54 @@ export default function Home() {
     }
   };
 
-  const handleDownloadWatermarked = async () => {
-    if (!transformedImage) return;
-    
-    try {
-      setIsWatermarking(true);
-      const watermarkedImage = await addWatermark(transformedImage);
-      
-      const arr = watermarkedImage.split(',');
-      const mimeMatch = arr[0].match(/:(.*?);/);
-      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      const blob = new Blob([u8arr], { type: mime });
-
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `artwork-${selectedStyle}-preview.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
-
-      toast({
-        title: "Download started",
-        description: "Your watermarked preview is downloading",
-      });
-      setCurrentStep("download");
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Download failed",
-        description: "Could not download. Please try again.",
-      });
-    } finally {
-      setIsWatermarking(false);
-    }
-  };
-
-  const handlePurchase = (tier: string) => {
+  const handlePurchase = async (tier: string, variantOption?: string) => {
     setCurrentStep("download");
+    if (USE_MEDUSA_PRODUCTS) {
+      const key = `${tier}-${variantOption ?? ""}`;
+      setShowCheckoutOverlay(true);
+      setPurchasingTier(key);
+      toast({ title: "Redirecting to checkout...", description: "Taking you to complete your order." });
+      try {
+        const type = tier === "Instant Masterpiece" ? "digital" : tier === "Fine Art Canvas Print" || tier === "Fine Art Print" ? "print" : "handmade";
+        const size = type === "digital" ? "default" : (variantOption ?? "default");
+        const productHandle = getProductHandle(activeCategory);
+        const res = await fetch("/api/medusa/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            productHandle,
+            style: selectedStyle,
+            type,
+            variantOption: size,
+            transformationId: transformationId ?? undefined,
+            locale: getCheckoutLocale(),
+          }),
+        });
+        const data = await res.json();
+        if (data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        setShowCheckoutOverlay(false);
+        toast({
+          variant: "destructive",
+          title: "Checkout error",
+          description: data.details || "Could not start checkout. Please try again.",
+        });
+      } catch (e) {
+        console.error("Medusa checkout:", e);
+        setShowCheckoutOverlay(false);
+        toast({
+          variant: "destructive",
+          title: "Checkout error",
+          description: "Could not start checkout. Please try again.",
+        });
+      } finally {
+        setShowCheckoutOverlay(false);
+        setPurchasingTier(null);
+      }
+      return;
+    }
     toast({
       title: "Sign in required",
       description: `Please sign in to purchase the ${tier} option.`,
@@ -300,6 +439,7 @@ export default function Home() {
   const handleRetry = () => {
     setCurrentStep("upload");
     setTransformedImage(null);
+    setTransformationId(null);
     setSelectedFile(null);
     setPreviewUrl(null);
     setProgress(0);
@@ -316,53 +456,37 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-primary/10 border-b py-2 text-center text-sm">
-        <span className="mr-4">Free Shipping on Prints</span>
-        <span className="mr-4">Rated 4.8★</span>
-        <span>#1 on Trustpilot</span>
-      </div>
+      {showCheckoutOverlay && <CheckoutRedirectOverlay />}
+      <div className="container px-4 py-6 mx-auto max-w-5xl">
+        <p className="text-center text-xs text-muted-foreground mb-1 md:mb-2">{content.flowTagline}</p>
 
-      <div className="container px-4 py-8 mx-auto max-w-5xl">
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-6">
-          <span className={cn(currentStep === "upload" ? "text-foreground font-medium" : "")}>
-            Upload
-          </span>
-          <span>&gt;</span>
-          <span className={cn(currentStep === "preview" || currentStep === "download" ? "text-foreground font-medium" : "")}>
-            Preview
-          </span>
-          <span>&gt;</span>
-          <span className={cn(currentStep === "download" ? "text-foreground font-medium" : "")}>
-            Download or Order Print
-          </span>
-        </div>
-
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3 font-serif italic whitespace-pre-line">
-            {content.headline}
+        <div className="text-center mb-2 md:mb-3">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 font-display font-display-hero text-balance max-w-2xl mx-auto">
+            <span className="block">{content.headlineLine1}</span>
+            <span className="block">{content.headlineLine2}</span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {content.subheadline}
           </p>
         </div>
 
         {(currentStep === "upload" || isTransforming) && (
-          <Card className="p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
+          <Card className="p-3 md:p-4 mb-2 md:mb-3">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Palette className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Pick Style</span>
+                <span className="text-xs text-muted-foreground">{content.step1Text}</span>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-6">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {allStyles.map((style) => (
                 <button
                   key={style.id}
                   onClick={() => setSelectedStyle(style.id)}
                   disabled={isTransforming}
                   className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                     selectedStyle === style.id
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground hover-elevate"
@@ -376,19 +500,19 @@ export default function Home() {
 
             {!isTransforming ? (
               <div
-                className="border-2 border-dashed rounded-xl p-12 text-center hover-elevate transition-all cursor-pointer"
+                className="border-2 border-dashed rounded-lg p-4 md:p-5 text-center hover-elevate transition-all cursor-pointer"
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
                 onClick={() => document.getElementById("file-input")?.click()}
                 data-testid="dropzone-upload"
               >
-                <div className="flex flex-col items-center gap-4 max-w-md mx-auto">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                    <Upload className="w-8 h-8 text-muted-foreground" />
+                <div className="flex flex-col items-center gap-2 max-w-md mx-auto">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                    <Upload className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">{content.uploadText}</h3>
-                    <p className="text-sm text-muted-foreground">Use a well-lit photo for best results</p>
+                    <h3 className="text-base font-semibold mb-0.5">{content.uploadText}</h3>
+                    <p className="text-xs text-muted-foreground">{content.photoTip}</p>
                   </div>
                   <input
                     id="file-input"
@@ -401,57 +525,89 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl overflow-hidden bg-muted">
-                <div className="relative aspect-square max-w-lg mx-auto">
-                  {previewUrl && (
-                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover opacity-50" />
-                  )}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center space-y-4 p-6">
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto animate-pulse">
-                        <Sparkles className="w-8 h-8 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Creating your masterpiece...</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Applying {styleData[selectedStyle]?.name} style
-                        </p>
-                        <div className="w-48 bg-background/50 rounded-full h-2 mb-2 overflow-hidden mx-auto">
-                          <div className="h-full bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
-                        </div>
-                        <p className="text-xs text-muted-foreground">{progress}%</p>
-                      </div>
+              <div className="rounded-xl overflow-hidden bg-muted/50 border border-border/50">
+                <div className="p-8 md:p-10 text-center">
+                  <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center mx-auto mb-5 animate-pulse">
+                    <Sparkles className="w-7 h-7 text-primary" />
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-semibold text-foreground mb-2">
+                    {progress < 15 ? "Preparing your image..." : progress < 70 ? "Creating your masterpiece..." : "Almost ready..."}
+                  </h3>
+                  <p className="text-base text-muted-foreground mb-1">
+                    {progress < 15 ? "Optimizing for best results" : progress < 70 ? `Applying ${styleData[selectedStyle]?.name} style` : "Adding final details"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4 min-h-[2rem] flex items-center justify-center">
+                    {TRANSFORM_TIPS[transformTipIndex]}
+                  </p>
+                  <div className="w-full max-w-xs mx-auto mb-2">
+                    <div className="h-2.5 bg-background/60 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
                     </div>
                   </div>
+                  <p className="text-sm font-medium text-foreground">{Math.round(progress)}%</p>
                 </div>
               </div>
             )}
           </Card>
         )}
 
-        {!isTransforming && currentStep === "upload" && (
+        {!transformedImage && (
           <>
-            <div className="flex items-center justify-center gap-2 mb-6">
-              <span className="text-green-600 font-semibold">Excellent</span>
-              <div className="flex">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="w-5 h-5 bg-green-600 flex items-center justify-center">
-                    <span className="text-white text-xs">★</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 py-0.5 mb-0.5">
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://www.reviews.co.uk/product-reviews/store/art-and-see.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center shrink-0"
+                >
+                  <img
+                    src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/badge2.gif?v=1764167405"
+                    alt="Reviews.io Verified Company"
+                    className="h-8 w-auto object-contain"
+                    loading="eager"
+                    decoding="async"
+                  />
+                </a>
+                <div className="flex items-center -space-x-2.5">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <img
+                      key={i}
+                      src={`https://pub-ec72d28400074017a168ab75baec0ff4.r2.dev/avatars/customer${i}.webp`}
+                      alt="Happy customer"
+                      width={36}
+                      height={36}
+                      className="w-9 h-9 rounded-full border-2 border-background object-cover shadow-sm"
+                    />
+                  ))}
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex items-center gap-1">
+                    <img
+                      src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/reviewsukgif.gif?v=1764164124"
+                      alt="5 star rating"
+                      className="h-4 w-auto object-contain"
+                      loading="eager"
+                      decoding="async"
+                    />
+                    <span className="text-sm font-bold text-foreground">4.8/5</span>
                   </div>
-                ))}
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">Trusted by 2,000+</span> happy customers
+                  </div>
+                </div>
               </div>
-              <span className="text-sm text-muted-foreground">Trustpilot</span>
             </div>
-            <p className="text-center text-sm text-muted-foreground mb-8">{content.trustText}</p>
+            <p className="text-center text-xs text-muted-foreground m-0 mb-4 leading-tight">{content.trustText}</p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              {content.images.map((image, index) => (
+              {galleryImages[activeCategory][selectedStyle].map((image, index) => (
                 <div
                   key={index}
                   className="aspect-[3/4] rounded-xl overflow-hidden hover-elevate cursor-pointer"
-                  data-testid={`gallery-${activeCategory}-${index}`}
+                  data-testid={`gallery-${activeCategory}-${selectedStyle}-${index}`}
                 >
-                  <img src={image} alt={`${activeCategory} portrait ${index + 1}`} className="w-full h-full object-cover" />
+                  <img src={image} alt={`${activeCategory} ${selectedStyle} portrait ${index + 1}`} className="w-full h-full object-cover" loading={index < 3 ? "eager" : "lazy"} fetchPriority={index < 3 ? "high" : "low"} />
                 </div>
               ))}
             </div>
@@ -461,7 +617,7 @@ export default function Home() {
         {(currentStep === "preview" || currentStep === "download") && transformedImage && (
           <div ref={resultRef}>
             <div className="text-center mb-6">
-              <h2 className="text-3xl md:text-4xl font-bold font-serif italic">
+              <h2 className="text-3xl md:text-4xl font-bold font-display italic">
                 Your Masterpiece is Ready!
               </h2>
             </div>
@@ -473,15 +629,8 @@ export default function Home() {
                   Retry or Edit
                 </Button>
               </div>
-              <div className="rounded-xl overflow-hidden border shadow-lg relative">
-                <img src={transformedImage} alt="Your artwork" className="w-full h-auto" data-testid="img-transformed" />
-                <div className="absolute inset-0 pointer-events-none select-none flex items-center justify-center">
-                  <div className="grid grid-cols-3 gap-8 opacity-20 rotate-[-15deg]">
-                    {Array.from({ length: 9 }).map((_, i) => (
-                      <span key={i} className="text-lg font-bold text-foreground whitespace-nowrap">ART & SEE</span>
-                    ))}
-                  </div>
-                </div>
+              <div className="rounded-xl overflow-hidden border shadow-lg relative" onContextMenu={(e) => e.preventDefault()}>
+                <ProtectedImage src={watermarkedDisplayUrl ?? transformedImage} alt="Your artwork" className="w-full h-auto" data-testid="img-transformed" />
               </div>
             </div>
 
@@ -507,14 +656,24 @@ export default function Home() {
             <h2 className="text-2xl font-semibold text-center mb-6">Choose Your Format</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <Card className="p-6 relative">
+              <Card className="p-6 relative card-selected">
                 <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">Most Popular</Badge>
                 <div className="text-center mb-4">
                   <Download className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
-                  <h3 className="text-xl font-semibold mb-1 font-serif">Instant Masterpiece</h3>
+                  <h3 className="text-xl font-semibold mb-1 font-display">Instant Masterpiece</h3>
                   <div className="flex items-center justify-center gap-2">
-                    <span className="text-lg line-through text-muted-foreground">$39</span>
-                    <span className="text-3xl font-bold">$29</span>
+                    {pricesLoading ? (
+                      <span className="text-3xl font-bold">—</span>
+                    ) : (
+                      <>
+                        {priceData.digitalOriginal != null && priceData.digitalOriginal > (priceData.digital?.default ?? 0) && (
+                          <span className="text-lg line-through text-muted-foreground">${priceData.digitalOriginal}</span>
+                        )}
+                        <span className="text-3xl font-bold">
+                          {(priceData.digital?.default ?? 0) > 0 ? `$${(priceData.digital?.default ?? 0).toFixed(2)}` : "—"}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <p className="text-sm text-primary mt-1">Expires in {formatCountdown(countdown)}</p>
                   <p className="text-sm text-muted-foreground mt-2">
@@ -526,22 +685,9 @@ export default function Home() {
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Instant Download</li>
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />High-Resolution Portrait</li>
                 </ul>
-                <Button className="w-full" size="lg" onClick={() => handlePurchase("Instant Masterpiece")} data-testid="button-buy-instant">
-                  Download Now
+                <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase("Instant Masterpiece")} disabled={!!purchasingTier} data-testid="button-buy-instant">
+                  {purchasingTier === "Instant Masterpiece-" ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding to cart...</> : "Download Now"}
                 </Button>
-                <div className="mt-4 pt-4 border-t text-center">
-                  <p className="text-xs text-muted-foreground mb-1">Want a free preview?</p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDownloadWatermarked}
-                    disabled={isWatermarking}
-                    className="text-xs underline"
-                    data-testid="button-download-free"
-                  >
-                    {isWatermarking ? "Preparing..." : "Download with Watermark (Free)"}
-                  </Button>
-                </div>
               </Card>
 
               <Card className="p-6">
@@ -550,10 +696,15 @@ export default function Home() {
                     <rect x="3" y="3" width="18" height="18" rx="2" />
                     <path d="M3 9h18M9 21V9" />
                   </svg>
-                  <h3 className="text-xl font-semibold mb-1 font-serif">Fine Art Print</h3>
-                  <span className="text-3xl font-bold">$89</span>
+                  <h3 className="text-xl font-semibold mb-1 font-display">Fine Art Canvas Print</h3>
+                  <span className="text-3xl font-bold">
+                    {pricesLoading ? "—" : (() => {
+                      const p = printSizes.find((s) => s.value === printSize)?.price ?? 0;
+                      return p > 0 ? `$${p.toFixed(2)}` : "—";
+                    })()}
+                  </span>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Printed on museum-quality archival paper with fade-resistant inks.
+                    Museum-quality canvas print — stretched, ready to hang.
                   </p>
                 </div>
                 <div className="mb-4">
@@ -561,85 +712,102 @@ export default function Home() {
                   <Select value={printSize} onValueChange={setPrintSize}>
                     <SelectTrigger data-testid="select-print-size"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="8x10">8" x 10"</SelectItem>
-                      <SelectItem value="11x14">11" x 14"</SelectItem>
-                      <SelectItem value="16x20">16" x 20"</SelectItem>
+                      {printSizes.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label} — {s.price > 0 ? `$${s.price.toFixed(2)}` : "—"}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <ul className="space-y-2 mb-4 text-sm">
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Museum-quality archival paper</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Fade-resistant inks</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Stretched, ready to hang</li>
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Cotton-blend canvas, museum-quality</li>
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Made to last decades</li>
                 </ul>
-                <div className="flex items-center gap-2 bg-muted rounded-lg p-2 mb-4 text-sm">
-                  <Truck className="w-4 h-4 text-primary" />
-                  <span className="font-medium">Free Shipping</span>
-                  <span className="text-muted-foreground text-xs">($20 value)</span>
+                <div className="mb-4">
+                  <FreeShippingBadge />
                 </div>
                 <p className="text-xs text-primary mb-2">+ Includes digital download</p>
-                <Button variant="outline" className="w-full" size="lg" onClick={() => handlePurchase("Fine Art Print")} data-testid="button-buy-print">
-                  Order Print
+                <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase("Fine Art Canvas Print", printSize)} disabled={!!purchasingTier} data-testid="button-buy-print">
+                  {purchasingTier === `Fine Art Canvas Print-${printSize}` ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding to cart...</> : "Order Canvas"}
                 </Button>
               </Card>
 
-              <Card className="p-6 relative">
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500">The Perfect Gift</Badge>
+              <Card className="p-6 relative border-2 border-green-500">
+                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground">🎁 The Perfect Gift</Badge>
                 <div className="text-center mb-4">
-                  <svg className="w-8 h-8 mx-auto mb-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <path d="M3 9h18M9 21V9" />
-                  </svg>
-                  <h3 className="text-xl font-semibold mb-1 font-serif">Large Canvas</h3>
-                  <span className="text-3xl font-bold">$299</span>
+                  <Palette className="w-8 h-8 mx-auto mb-3 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-1 font-display">{styleData[selectedStyle].name}</h3>
+                  <div className="flex items-center justify-center gap-2 flex-wrap">
+                    <span className="text-sm text-muted-foreground">from</span>
+                    <span className="text-3xl font-bold text-primary">
+                      {pricesLoading
+                        ? "—"
+                        : (() => {
+                          const p = handmadeSizes.find((s) => s.value === handmadeSize)?.price ?? 0;
+                          return p > 0 ? `$${p.toFixed(2)}` : "—";
+                        })()}
+                    </span>
+                    <Badge variant="secondary" className="bg-foreground text-background">{handmadeCardContent[selectedStyle].badge}</Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Gallery-quality canvas on wood — arrives ready to hang.
+                    {handmadeCardContent[selectedStyle].tagline}
                   </p>
                 </div>
                 <div className="mb-4">
-                  <label className="text-sm text-muted-foreground mb-1 block">Choose Size</label>
-                  <Select value={canvasSize} onValueChange={setCanvasSize}>
-                    <SelectTrigger data-testid="select-canvas-size"><SelectValue /></SelectTrigger>
+                  <label className="text-sm text-muted-foreground mb-1 block">Select Size *</label>
+                  <Select value={handmadeSize} onValueChange={setHandmadeSize}>
+                    <SelectTrigger data-testid="select-handmade-size"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="12x16">12" x 16"</SelectItem>
-                      <SelectItem value="16x20">16" x 20"</SelectItem>
-                      <SelectItem value="24x36">24" x 36"</SelectItem>
+                      {handmadeSizes.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label} — {s.price > 0 ? `$${s.price.toFixed(2)}` : "—"}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <ul className="space-y-2 mb-4 text-sm">
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Ready to hang</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Cotton-blend canvas, 1.25" thick</li>
-                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Mounting included</li>
+                  {handmadeCardContent[selectedStyle].bullets.map((bullet) => (
+                    <li key={bullet} className="flex items-center gap-2"><Check className="w-4 h-4 text-primary shrink-0" />{bullet}</li>
+                  ))}
                 </ul>
-                <div className="flex items-center gap-2 bg-muted rounded-lg p-2 mb-4 text-sm">
-                  <Truck className="w-4 h-4 text-primary" />
-                  <span className="font-medium">Free Shipping</span>
-                  <span className="text-muted-foreground text-xs">($20 value)</span>
+                <div className="mb-4">
+                  <FreeShippingBadge />
                 </div>
                 <p className="text-xs text-primary mb-2">+ Includes digital download</p>
-                <Button className="w-full bg-primary" size="lg" onClick={() => handlePurchase("Large Canvas")} data-testid="button-buy-canvas">
-                  Order Canvas
+                <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase(styleData[selectedStyle].name, handmadeSize)} disabled={!!purchasingTier} data-testid="button-buy-handmade">
+                  {purchasingTier === `${styleData[selectedStyle].name}-${handmadeSize}` ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding to cart...</> : `Order ${styleData[selectedStyle].name}`}
                 </Button>
               </Card>
             </div>
 
-            <div className="text-center mb-8">
-              <p className="text-muted-foreground mb-2">Chosen by 10,000+ Art Lovers</p>
-              <div className="flex items-center justify-center gap-2">
-                <span className="font-semibold text-green-600">Excellent</span>
-                <div className="flex">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="w-6 h-6 bg-green-600 flex items-center justify-center">
-                      <span className="text-white text-xs">★</span>
-                    </div>
-                  ))}
-                </div>
-                <span className="text-sm text-muted-foreground">Trustpilot</span>
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-6 py-4 mb-8">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-foreground text-sm">Excellent</span>
+                <img
+                  src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/reviewsukgif.gif?v=1764164124"
+                  alt="5 star rating"
+                  className="h-4 w-auto object-contain"
+                />
+                <span className="font-bold text-foreground text-sm">4.8/5</span>
               </div>
+              <a
+                href="https://www.reviews.co.uk/product-reviews/store/art-and-see.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center"
+              >
+                <img
+                  src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/badge2.gif?v=1764167405"
+                  alt="Reviews.io Verified Company"
+                  className="h-8 w-auto object-contain"
+                />
+              </a>
             </div>
 
-            <h3 className="text-xl font-semibold text-center mb-4 font-serif">Send to Friends & Family</h3>
+            <h3 className="text-xl font-semibold text-center mb-4 font-display">Send to Friends & Family</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl mx-auto mb-8">
               <Button variant="outline" size="lg" className="gap-2" data-testid="button-save">
                 <Bookmark className="w-4 h-4" />Save for Later
@@ -654,7 +822,7 @@ export default function Home() {
                 <AccordionTrigger><span className="font-medium">What Customers Say</span></AccordionTrigger>
                 <AccordionContent>
                   <p className="text-muted-foreground">
-                    Rated <strong>Excellent</strong> on Trustpilot. Our customers love the quality and attention to detail.
+                    Rated <strong>Excellent</strong> on Reviews.io. Our customers love the quality and attention to detail.
                   </p>
                 </AccordionContent>
               </AccordionItem>
@@ -675,18 +843,19 @@ export default function Home() {
             </Accordion>
 
             <div className="text-center mb-8">
-              <p className="text-sm text-muted-foreground mb-4">AS SEEN ON</p>
-              <div className="flex flex-wrap justify-center gap-8 opacity-50">
-                <span className="text-lg font-serif">The New York Times</span>
-                <span className="text-lg font-bold">Forbes</span>
-                <span className="text-lg tracking-widest">ELLE</span>
-                <span className="text-lg font-serif tracking-widest">VOGUE</span>
+              <p className="text-xs font-semibold text-neutral-500 mb-4">AS FEATURED IN</p>
+              <div className="flex items-center justify-center gap-6 flex-wrap opacity-40 grayscale">
+                <img src="/abc-logo.svg" alt="ABC" width={28} height={28} className="h-7 w-auto" />
+                <img src="/nbc-logo.svg" alt="NBC" width={28} height={28} className="h-7 w-auto" />
+                <img src="/fox-logo.svg" alt="FOX" width={18} height={18} className="h-[18px] w-auto" />
+                <img src="/cw-logo.svg" alt="The CW" width={48} height={20} className="h-5 w-auto" />
+                <img src="/ap-logo.svg" alt="Associated Press" width={28} height={28} className="h-7 w-auto" />
               </div>
             </div>
 
             <Card className="p-6 mb-8 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
               <div className="text-center max-w-2xl mx-auto">
-                <h3 className="text-2xl font-semibold mb-2 font-serif">
+                <h3 className="text-2xl font-semibold mb-2 font-display">
                   Want a REAL Hand-Painted Masterpiece?
                 </h3>
                 <p className="text-muted-foreground mb-4">

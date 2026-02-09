@@ -10,9 +10,21 @@ export default {
         md: ".375rem", /* 6px */
         sm: ".1875rem", /* 3px */
       },
+      boxShadow: {
+        card: "var(--card-shadow)",
+        "card-hover": "var(--card-shadow-hover)",
+        "card-selected": "var(--card-shadow-selected)",
+        "button-primary": "var(--button-primary-shadow)",
+        "button-primary-hover": "var(--button-primary-shadow-hover)",
+      },
       colors: {
         // Flat / base colors (regular buttons)
         background: "hsl(var(--background) / <alpha-value>)",
+        "nav-pill-bg": "hsl(var(--nav-pill-bg) / <alpha-value>)",
+        "primary-tint": "hsl(var(--primary-tint) / <alpha-value>)",
+        "announcement-bg": "hsl(var(--announcement-bg) / <alpha-value>)",
+        "announcement-bar": "hsl(var(--announcement-bar) / <alpha-value>)",
+        "announcement-bar-foreground": "hsl(var(--announcement-bar-foreground) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
         border: "hsl(var(--border) / <alpha-value>)",
         input: "hsl(var(--input) / <alpha-value>)",
@@ -85,6 +97,7 @@ export default {
       fontFamily: {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
+        display: ["var(--font-display)"],
         mono: ["var(--font-mono)"],
       },
       keyframes: {

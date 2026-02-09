@@ -20,6 +20,7 @@ export const transformations = pgTable("transformations", {
   transformedImageUrl: text("transformed_image_url"),
   style: varchar("style", { length: 50 }).notNull(),
   status: varchar("status", { length: 20 }).notNull().default("pending"),
+  errorMessage: text("error_message"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

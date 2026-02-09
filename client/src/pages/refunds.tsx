@@ -2,7 +2,7 @@ export default function Refunds() {
   return (
     <div className="flex-1 py-12 px-4">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 font-serif italic">Refund Policy</h1>
+        <h1 className="text-4xl font-bold mb-8 font-display">Refund Policy</h1>
         
         <div className="prose prose-lg dark:prose-invert max-w-none">
           <p className="text-muted-foreground mb-8">

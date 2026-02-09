@@ -6,12 +6,14 @@ import { cn } from "@/lib/utils";
 import { allStyles, styleData } from "@/lib/styles";
 import { ProgressStepper } from "@/components/progress-stepper";
 import { useTransformation } from "@/lib/transformation-context";
+import { useCategory } from "@/lib/category-context";
 import { useToast } from "@/hooks/use-toast";
 import type { ArtStyle } from "@shared/schema";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { setTransformationData, pendingStyle, setPendingStyle } = useTransformation();
+  const { activeCategory } = useCategory();
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -66,8 +68,8 @@ export default function Dashboard() {
       });
 
       progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 8, 95));
-      }, 200);
+        setProgress((prev) => Math.min(prev + 2, 90));
+      }, 600);
 
       const response = await fetch("/api/transform", {
         method: "POST",
@@ -119,6 +121,8 @@ export default function Dashboard() {
                   transformedImage: transformation.transformedImageUrl || selectedStyleInfo.image,
                   style: selectedStyle,
                   styleName: selectedStyleInfo.name,
+                  category: activeCategory,
+                  transformationId,
                 });
 
                 setTimeout(() => {
@@ -127,7 +131,8 @@ export default function Dashboard() {
                 
                 resolve();
               } else if (transformation.status === "failed") {
-                reject(new Error("Transformation failed on server"));
+                const msg = transformation.errorMessage || "Transformation failed on server";
+                reject(new Error(msg));
               } else if (attempts < maxAttempts) {
                 setTimeout(checkStatus, 300);
               } else {
@@ -168,7 +173,7 @@ export default function Dashboard() {
         </div>
 
         <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3 font-serif italic">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 font-display font-display-hero">
             Transform Your Photo
             <br />
             Into Art
@@ -254,9 +259,10 @@ export default function Dashboard() {
                       <h3 className="text-lg font-semibold mb-2">
                         Creating your masterpiece...
                       </h3>
-                      <p className="text-sm text-muted-foreground mb-4">
+                      <p className="text-sm text-muted-foreground mb-1">
                         Applying {styleData[selectedStyle]?.name} style
                       </p>
+                      <p className="text-xs text-muted-foreground mb-4">Usually takes 15–30 seconds</p>
                       <div className="w-48 bg-background/50 rounded-full h-2 mb-2 overflow-hidden mx-auto">
                         <div
                           className="h-full bg-primary transition-all duration-300"

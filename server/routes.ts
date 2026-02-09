@@ -5,243 +5,75 @@ import { z } from "zod";
 import { insertTransformationSchema } from "@shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { setupAuth, isAuthenticated } from "./auth";
+import { generateGalleryImage } from "./generate-gallery";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
-const stylePrompts: Record<string, string> = {
-  "oil-painting": `Transform this photo into a realistic oil painting with authentic oil painting techniques. Apply these specific characteristics:
+const FORMAT_BLOCK = `
 
-PAINT APPLICATION & TEXTURE:
-- Thick, visible impasto brush strokes with dimensional paint buildup
-- Directional brush work following the form and contours of subjects
-- Alla prima technique with wet-on-wet blending where colors meet
-- Paint knife marks in highlights and textured areas
-- Visible canvas weave texture throughout, especially in lighter areas
-- Glazing effects in shadow areas with transparent color layers
+Format:
+Output aspect ratio: 3:4 (portrait) or 2:3 (landscape) to match source image orientation
+Output must be a cropped end-to-end image—the artwork fills the entire frame edge to edge with no visible borders
+Show only the artwork surface—no frame, canvas edge, paper edge, wall, or easel
+Focus entirely on the medium and technique without external elements
 
-COLOR & TONE:
-- Rich, deep oil paint pigments with natural saturation
-- Warm undertones typical of linseed oil medium
-- Subtle color mixing and muddy transitions where paint meets
-- Chiaroscuro lighting with dramatic light-to-shadow transitions
-- Slightly muted highlights to avoid artificial brightness
-- Earthy, natural color palette with realistic pigment behavior
+Negative prompt:
+No frames, no walls, no canvas edges, no paper edges, no canvas mounting, no easels, no hanging display, no room context, no visible borders or margins`;
 
-ARTISTIC DETAILS:
-- Loose, expressive brushwork in background areas
-- Tighter, more controlled detail in focal points and faces
-- Sfumato effect for soft atmospheric transitions
-- Paint buildup creating actual texture and relief
-- Traditional oil painting composition and framing
-
-The result must look indistinguishable from a photograph of an actual oil painting on canvas, not a digital filter.`,
-
-  acrylic: `Transform this photo into an authentic acrylic painting with modern acrylic painting characteristics. Apply these specific features:
-
-PAINT APPLICATION & TEXTURE:
-- Bold, graphic brush strokes with hard, defined edges
-- Fast-drying acrylic aesthetic with no wet blending
-- Flat, matte paint surface with slight sheen in thick areas
-- Crisp color boundaries and sharp transitions
-- Palette knife techniques creating flat color planes
-- Visible brush bristle marks in the paint surface
-- Layered painting with complete opacity - no underlying layers showing through
-
-COLOR & TONE:
-- Vibrant, intense pigments with high chroma colors
-- Clean, unmixed colors applied directly
-- Bright, saturated hues without oil painting's warmth
-- Contemporary color choices - bold primaries and secondaries
-- Pop art influenced color relationships
-- High contrast between light and dark areas
-
-ARTISTIC STYLE:
-- Modern, graphic design aesthetic
-- Energetic, dynamic composition
-- Contemporary painting techniques
-- Urban art influenced edge quality
-- Clean, deliberate mark-making
-- Confident, expressive brushwork with personality
-
-The result must look like a real contemporary acrylic painting photographed in a gallery, with authentic acrylic paint properties.`,
-
-  "pencil-sketch": `Convert this photo into an authentic pencil sketch with traditional graphite drawing techniques. Apply these specific characteristics:
-
-PENCIL TECHNIQUE & MARKS:
-- Visible graphite pencil strokes with varying pressure
-- Cross-hatching and parallel line shading for tones
-- Contour lines defining edges and forms
-- Smudged graphite for soft shadows and atmospheric effects
-- Directional hatching following the form and volume
-- Sharp, precise lines for details and focal points
-- Loose, gestural strokes for less important areas
-- Eraser marks creating highlights by lifting graphite
-
-TONAL RANGE & SHADING:
-- Full range from white paper to deep graphite blacks
-- Midtones built up with layered hatching
-- Core shadows with dense, dark graphite
-- Highlights left as bare white paper
-- Gradual tonal transitions through varied line density
-- Reflected light in shadow areas
-- Form shadow and cast shadow distinction
-
-PAPER & SURFACE:
-- Visible paper tooth and texture throughout
-- Slight paper grain affecting pencil strokes
-- Uneven graphite coverage showing paper surface
-- Natural drawing paper color (off-white/cream)
-- Paper texture more visible in lighter areas
-
-DRAWING STYLE:
-- Classical academic drawing approach
-- Observed life drawing aesthetic
-- Anatomically accurate with artistic interpretation
-- Construction lines subtly visible
-- Artist's hand and personality in mark-making
-- Traditional portrait/still life drawing conventions
-
-The result must look like an actual graphite pencil drawing photographed on drawing paper, not a digital sketch effect.`,
-
-  watercolor: `Transform this photo into an authentic watercolor painting with traditional watercolor techniques. Apply these specific characteristics:
-
-WATERCOLOR TECHNIQUE:
-- Transparent, luminous washes with light showing through
-- Wet-on-wet bleeding where colors meet naturally
-- Cauliflower blooms and backruns from water pooling
-- Hard edges where paint dries with pigment concentration
-- Soft, diffused edges from wet-into-wet technique
-- Granulation in darker washes showing pigment settling
-- White paper preserved for brightest highlights
-- Lifting and scraping effects for texture
-
-COLOR & PIGMENT:
-- Transparent, flowing color with natural water diffusion
-- Subtle color mixing happening on paper, not pre-mixed
-- Watercolor staining and settling patterns
-- Lighter values overall due to water dilution
-- Colors becoming more intense at edges of washes
-- Natural pigment separation in mixed areas
-- Watercolor palette typical colors and combinations
-
-PAPER & SURFACE:
-- Cold-pressed watercolor paper texture highly visible
-- Paper buckling and warping slightly from water
-- White paper showing through transparent washes
-- Paper texture affecting paint flow and settling
-- Deckled edges or paper border if full sheet
-- Natural watercolor paper color (bright white)
-
-PAINTING CHARACTERISTICS:
-- Light, airy, ethereal quality
-- Spontaneous, fluid paint application
-- Happy accidents and organic effects
-- Loose, impressionistic rendering
-- Atmospheric perspective with lighter distant areas
-- Traditional watercolor subject treatment
-- Negative space with bare paper
-
-The result must look like a real watercolor painting photographed under natural light, showing authentic watercolor medium properties.`,
-
-  charcoal: `Transform this photo into an authentic charcoal drawing with traditional charcoal techniques. Apply these specific characteristics:
-
-CHARCOAL TECHNIQUE & MARKS:
-- Rich, velvety black charcoal marks with depth
-- Smudged and blended tones using finger or tortillon
-- Compressed charcoal for intense blacks
-- Vine charcoal for lighter, atmospheric tones
-- Directional strokes following form and contour
-- Cross-contour shading building volume
-- Eraser used for highlights - lifting charcoal to reveal paper
-- Charcoal dust creating soft, atmospheric effects
-
-TONAL RANGE & CONTRAST:
-- Dramatic value range from pure white to deepest black
-- High contrast with bold shadows
-- Chiaroscuro lighting emphasis
-- Dense, solid blacks in deepest shadows
-- Soft, graduated midtones through blending
-- Bright highlights from eraser or bare paper
-- Atmospheric grays in background and distance
-- Form revealed through light and shadow alone
-
-TEXTURE & SURFACE:
-- Visible charcoal particle texture
-- Rough paper tooth showing through
-- Smudge marks and finger blending visible
-- Paper texture affecting charcoal adhesion
-- Slightly dusty, matte surface quality
-- Natural drawing paper tone (off-white or toned)
-- Uneven charcoal coverage showing hand-drawn quality
-
-DRAWING STYLE:
-- Expressive, gestural mark-making
-- Bold, confident strokes
-- Classical figure drawing aesthetic
-- Emphasis on form, volume, and light
-- Dramatic, emotional rendering
-- Traditional academic drawing approach
-- Artist's hand evident in every mark
-
-The result must look like an actual charcoal drawing photographed on paper, with authentic charcoal medium characteristics and no digital processing.`,
-
-  pastel: `Transform this photo into an authentic soft pastel artwork with traditional pastel techniques. Apply these specific characteristics:
-
-PASTEL APPLICATION & TEXTURE:
-- Soft, chalky pastel stick marks with powdery texture
-- Visible individual pastel strokes and layers
-- Blended areas using finger or blending stump
-- Unblended strokes showing pure pigment color
-- Layered color building up on paper surface
-- Side-of-stick broad marks for large areas
-- Tip-of-stick precise marks for details
-- Pastel dust and particles visible on surface
-
-COLOR & PIGMENT:
-- Soft, muted color palette with gentle saturation
-- Multiple pastel colors layered creating optical mixing
-- Pure pigment colors from pastel sticks
-- Velvety color quality unique to pastels
-- Subtle color variations from layering
-- Romantic, dreamy color harmonies
-- Colors slightly dusty and chalky in appearance
-- Pastel's natural light-reflecting quality
-
-PAPER & SURFACE:
-- Textured pastel paper (sanded or velour surface)
-- Paper tooth visible affecting pastel adhesion
-- Paper color influencing overall tone
-- Texture most visible in lighter applications
-- Paper showing through in some areas
-- Pastel fixed creating slight sheen in some areas
-
-ARTISTIC STYLE:
-- Impressionistic, soft-focus rendering
-- Ethereal, romantic atmosphere
-- Gentle edges and soft transitions
-- Light, luminous quality
-- French Impressionist pastel traditions
-- Emphasis on color harmony and mood
-- Delicate, refined aesthetic
-- Atmospheric and dreamlike quality
-
-TECHNIQUE DETAILS:
-- Hatching and cross-hatching with pastel sticks
-- Scumbling technique for texture
-- Feathering strokes for soft edges
-- Impasto-like buildup in some areas
-- Subtle blending for smooth transitions
-- Linear marks over blended areas for detail
-
-The result must look like an actual soft pastel artwork photographed in natural light, showing authentic pastel medium characteristics and traditional pastel painting techniques.`,
+const categoryLabels: Record<string, string> = {
+  pets: "pet portrait",
+  family: "family portrait",
+  kids: "child portrait",
+  couples: "couple portrait",
+  "self-portrait": "self-portrait",
 };
+
+const styleTechniqueNames: Record<string, string> = {
+  "oil-painting": "oil painting",
+  acrylic: "acrylic painting",
+  "pencil-sketch": "pencil sketch",
+  watercolor: "watercolor painting",
+  charcoal: "charcoal drawing",
+  pastel: "pastel artwork",
+};
+
+const styleDisplayNames: Record<string, string> = {
+  "oil-painting": "Oil Painting",
+  acrylic: "Acrylic",
+  "pencil-sketch": "Pencil Sketch",
+  watercolor: "Watercolor",
+  charcoal: "Charcoal",
+  pastel: "Pastel",
+};
+
+const typeDisplayNames: Record<string, string> = {
+  digital: "Instant Masterpiece",
+  print: "Fine Art Print",
+  handmade: "Handmade",
+};
+
+const typeDescriptions: Record<string, string> = {
+  digital: "High-resolution download without watermark. Instant delivery.",
+  print: "Museum-quality archival paper with fade-resistant inks.",
+  handmade: "Hand-painted by master artists on cotton-blend canvas.",
+};
+
+function buildPrompt(style: string, category?: string): string {
+  const technique = styleTechniqueNames[style] || "oil painting";
+  const categoryLabel = category && categoryLabels[category] ? categoryLabels[category] : "photo";
+  const base = `Transform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques.`;
+  return base + FORMAT_BLOCK;
+}
 
 const transformWithGemini = async (
   originalImageUrl: string,
-  style: string
+  style: string,
+  category?: string
 ): Promise<string> => {
   try {
-    const model = genAI.getGenerativeModel({ 
+    // Note: aspectRatio is not supported in generationConfig for gemini-2.5-flash-image.
+    // The prompt FORMAT_BLOCK instructs 3:4 portrait or 2:3 landscape.
+    const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash-image",
     });
 
@@ -253,8 +85,7 @@ const transformWithGemini = async (
 
     const [, mimeType, base64Data] = base64Match;
 
-    // Get the appropriate prompt for the style
-    const prompt = stylePrompts[style] || stylePrompts["oil-painting"];
+    const prompt = buildPrompt(style, category);
 
     // Generate content with image and prompt
     const result = await model.generateContent([
@@ -331,11 +162,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Gallery generation - text-only, no source image (for sample gallery images)
+  app.post("/api/generate", async (req: any, res) => {
+    try {
+      const body = req.body as { style?: string; category?: string; imgIndex?: number };
+      const style = body.style || "oil-painting";
+      const category = body.category || "pets";
+      const imgIndex = body.imgIndex;
+
+      const imageUrl = await generateGalleryImage(style, category, imgIndex);
+      res.json({ success: true, imageUrl });
+    } catch (error) {
+      console.error("Generate error:", error);
+      res.status(500).json({
+        error: "Failed to generate image",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Free transformation endpoint - no auth required for preview
   app.post("/api/transform", async (req: any, res) => {
     try {
-      const validatedData = insertTransformationSchema.parse(req.body);
-      
+      const body = req.body as {
+        originalImageUrl?: string;
+        style?: string;
+        category?: string;
+        width?: number;
+        height?: number;
+      };
+      const validatedData = insertTransformationSchema.parse({
+        originalImageUrl: body.originalImageUrl,
+        style: body.style,
+        status: "processing",
+      });
+      const category = body.category;
+      const width = body.width;
+      const height = body.height;
+
       if (!validatedData.originalImageUrl || validatedData.originalImageUrl.length === 0) {
         res.status(400).json({ error: "Original image is required" });
         return;
@@ -350,7 +214,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const transformedImageUrl = await transformWithGemini(
             validatedData.originalImageUrl,
-            validatedData.style
+            validatedData.style,
+            category
           );
           
           await storage.updateTransformation(transformation.id, {
@@ -358,9 +223,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transformedImageUrl,
           });
         } catch (error) {
-          console.error("Transformation processing error:", error);
+          const errMsg = error instanceof Error ? error.message : String(error);
+          console.error("Transformation processing error:", errMsg, error);
           await storage.updateTransformation(transformation.id, {
             status: "failed",
+            errorMessage: errMsg,
           });
         }
       })();
@@ -391,6 +258,292 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(transformation);
     } catch (error) {
       res.status(500).json({ error: "Failed to get transformation" });
+    }
+  });
+
+  // Serve transformation image for checkout preview (CORS enabled for portraits.art-and-see.com)
+  const allowedOrigins = [
+    "https://portraits.art-and-see.com",
+    "https://ai.art-and-see.com",
+    "http://localhost:5000",
+    "http://localhost:5001",
+    "http://127.0.0.1:5000",
+    "http://127.0.0.1:5001",
+  ];
+  app.get("/api/transform/:id/image", async (req, res) => {
+    const origin = req.get("Origin");
+    if (origin && (allowedOrigins.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+    res.setHeader("Access-Control-Allow-Methods", "GET");
+    res.setHeader("Access-Control-Max-Age", "86400");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+
+    try {
+      const transformation = await storage.getTransformation(req.params.id);
+      if (!transformation?.transformedImageUrl) {
+        res.status(404).json({ error: "Transformation image not found" });
+        return;
+      }
+      const dataUrl = transformation.transformedImageUrl;
+      const match = dataUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (!match) {
+        res.status(400).json({ error: "Invalid image format" });
+        return;
+      }
+      const [mimeType, base64Data] = [match[1] === "jpg" ? "jpeg" : match[1], match[2]];
+      let buffer = Buffer.from(base64Data, "base64");
+
+      const maxWidth = req.query.w ? parseInt(String(req.query.w), 10) : 0;
+      const quality = req.query.q ? Math.min(100, Math.max(1, parseInt(String(req.query.q), 10))) : 85;
+
+      if (maxWidth > 0 && maxWidth < 4096) {
+        try {
+          const sharp = (await import("sharp")).default;
+          let pipeline = sharp(buffer);
+          const meta = await pipeline.metadata();
+          const width = meta.width ?? 0;
+          if (width > maxWidth) {
+            pipeline = pipeline.resize(maxWidth, null, { withoutEnlargement: true });
+          }
+          buffer = await pipeline.jpeg({ quality }).toBuffer();
+          res.setHeader("Content-Type", "image/jpeg");
+        } catch (sharpErr) {
+          console.warn("[transform/image] Sharp resize failed, serving original:", (sharpErr as Error).message);
+        }
+      }
+
+      if (!res.getHeader("Content-Type")) {
+        res.setHeader("Content-Type", `image/${mimeType}`);
+      }
+      res.send(buffer);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to serve image" });
+    }
+  });
+
+  const medusaStorefront = process.env.MEDUSA_STOREFRONT_URL?.replace(/\/$/, "") || process.env.MEDUSA_BACKEND_URL?.replace(/\/$/, "") || "";
+  const useMedusa = process.env.USE_MEDUSA_PRODUCTS === "true";
+
+  // Fetch handmade prices directly from Medusa Store API (no proxy, no fallbacks)
+  const medusaBackend = process.env.MEDUSA_BACKEND_URL?.replace(/\/$/, "") || "";
+  const medusaPublishableKey = process.env.MEDUSA_PUBLISHABLE_KEY || "";
+  const medusaRegionId = process.env.MEDUSA_REGION_ID || "reg_01KF60P6AREHJSW90593P3VCRZ";
+
+  app.get("/api/art-transform-prices", async (req, res) => {
+    if (!medusaBackend) {
+      return res.status(503).json({ error: "MEDUSA_BACKEND_URL not configured." });
+    }
+    const handle = req.query.handle as string;
+    if (!handle?.startsWith("art-transform-")) {
+      return res.status(400).json({ error: "Invalid handle. Expected art-transform-{category}." });
+    }
+
+    // Call Medusa Store API directly
+    const params = new URLSearchParams();
+    params.set("handle", handle);
+    params.set("region_id", medusaRegionId);
+    params.set("fields", "*options,*options.values,*variants.options,*variants.calculated_price,thumbnail");
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (medusaPublishableKey) headers["x-publishable-api-key"] = medusaPublishableKey;
+
+    try {
+      const medusaRes = await fetch(`${medusaBackend}/store/products?${params.toString()}`, { headers });
+      if (!medusaRes.ok) {
+        const errText = await medusaRes.text();
+        console.error("[Art Transform Prices] Medusa error:", medusaRes.status, errText);
+        return res.status(medusaRes.status).json({ error: "Medusa API error", details: errText });
+      }
+      const data = await medusaRes.json() as { products?: Array<{
+        options?: Array<{ id: string; title: string; values?: Array<{ id: string; value: string }> }>;
+        variants?: Array<{
+          title: string;
+          options?: Array<{ option_id: string; value: string }>;
+          calculated_price?: { calculated_amount: number };
+        }>;
+      }> };
+
+      const product = data.products?.[0];
+      if (!product?.variants?.length) {
+        return res.status(404).json({ error: `Product not found: ${handle}. Run: npm run medusa-seed` });
+      }
+
+      // Find Type and Size options
+      const opts = product.options || [];
+      const typeOpt = opts.find(o => o.title?.toLowerCase() === "type");
+      const sizeOpt = opts.find(o => o.title?.toLowerCase() === "size");
+      if (!typeOpt || !sizeOpt) {
+        return res.status(500).json({ error: "Product missing Type or Size options." });
+      }
+
+      // Medusa amounts are in dollars (major units). See EVIDENCE_100X_PRICING.md
+      const digital: Record<string, number> = {};
+      const print: Record<string, number> = {};
+      const handmade: Record<string, number> = {};
+      let digitalOriginal: number | undefined;
+
+      for (const v of product.variants) {
+        const vOpts = v.options || [];
+        const typeVal = vOpts.find(o => o.option_id === typeOpt.id)?.value?.toLowerCase();
+        const sizeRaw = vOpts.find(o => o.option_id === sizeOpt.id)?.value || "";
+        const sizeVal = sizeRaw.replace(/[^0-9x]/gi, "").toLowerCase();
+        const amount = v.calculated_price?.calculated_amount;
+        if (amount == null) continue;
+
+        if (typeVal === "digital") {
+          digital.default = amount;
+          if (digitalOriginal == null) digitalOriginal = Math.round(amount * 1.35); // Strikethrough ~$39 when sale is $29
+        } else if (typeVal === "print") {
+          if (sizeVal) print[sizeVal] = amount;
+        } else if (typeVal === "handmade") {
+          if (sizeVal) handmade[sizeVal] = amount;
+        }
+      }
+
+      if (Object.keys(handmade).length === 0) {
+        console.warn("[Art Transform Prices] No handmade prices extracted for", handle,
+          "| variants:", product.variants.length,
+          "| typeOpt.id:", typeOpt.id,
+          "| sizeOpt.id:", sizeOpt.id,
+          "| sample variant options:", JSON.stringify(product.variants[0]?.options?.slice(0, 3)),
+          "| sample calculated_price:", JSON.stringify(product.variants[0]?.calculated_price));
+      }
+
+      res.json({ digital, print, handmade, digitalOriginal });
+    } catch (err) {
+      console.error("[Art Transform Prices] Error:", err);
+      res.status(502).json({ error: "Failed to fetch prices from Medusa" });
+    }
+  });
+
+  app.post("/api/medusa/checkout", async (req, res) => {
+    if (!useMedusa || !medusaStorefront) {
+      res.status(503).json({ error: "Medusa checkout not configured. Set MEDUSA_STOREFRONT_URL." });
+      return;
+    }
+    try {
+      const body = req.body as {
+        productHandle?: string;
+        style?: string;
+        type?: string;
+        variantOption?: string;
+        transformationId?: string;
+        locale?: string;
+      };
+      const { productHandle, style, type, variantOption, transformationId, locale } = body;
+      if (!productHandle) {
+        res.status(400).json({ error: "productHandle required" });
+        return;
+      }
+
+      // Build previewImageUrl and productTitle when transformationId is provided.
+      // The image is served from the art-transform endpoint /api/transform/:id/image
+      // which reads the base64 from Neon DB. Requires ART_TRANSFORM_PUBLIC_URL in production
+      // (e.g. https://ai.art-and-see.com) so the URL works from Photos-to-Paintings.
+      let previewImageUrl: string | undefined;
+      let productTitle: string | undefined;
+      if (transformationId) {
+        const transformation = await storage.getTransformation(transformationId);
+        if (transformation?.transformedImageUrl) {
+          const baseUrl =
+            process.env.ART_TRANSFORM_PUBLIC_URL ||
+            `${req.protocol}://${req.get("host") || "localhost"}`.replace(/\/$/, "");
+          previewImageUrl = `${baseUrl}/api/transform/${transformationId}/image`;
+        }
+        const styleLabel = (style && styleDisplayNames[style]) || style || "Portrait";
+        const typeLabel = (type && typeDisplayNames[type]) || type || "";
+        const sizeLabel = variantOption && variantOption !== "default" ? ` ${variantOption}` : "";
+        productTitle = typeLabel ? `${styleLabel} - ${typeLabel}${sizeLabel}`.trim() : `${styleLabel}${sizeLabel}`.trim();
+      }
+
+      // Always build metadata for checkout display (style, type, size, description)
+      const productStyle = (style && styleDisplayNames[style]) || style || "Portrait";
+      const productType = (type && typeDisplayNames[type]) || type || "";
+      const productSize = (type === "digital" ? "default" : (variantOption && variantOption !== "default" ? variantOption : "default")) || "default";
+      const productDescription = (type && typeDescriptions[type]) || "";
+
+      // Variant option values for Medusa (must match product options: Style, Type, Size)
+      const variantStyle = style || "oil-painting";
+      const variantType = type || "digital";
+      const variantSize = productSize;
+
+      // Build productConfig for Photos-to-Paintings POST /api/product/cart
+      // downloadUrl: same as previewImageUrl - /api/transform/:id/image serves the clean (non-watermarked) image
+      const productConfig = {
+        source: "art-transform",
+        productTitle: productTitle ?? `${productStyle} - ${productType}`.trim(),
+        productStyle,
+        productType,
+        productSize,
+        productDescription: productDescription || undefined,
+        previewImageUrl: previewImageUrl || undefined,
+        downloadUrl: previewImageUrl || undefined,
+        // Raw variant option values for Medusa line-item matching (Style, Type, Size)
+        variantStyle,
+        variantType,
+        variantSize,
+      };
+
+      const items = [
+        {
+          productHandle,
+          quantity: 1,
+          productConfig,
+        },
+      ];
+
+      const productCartRes = await fetch(`${medusaStorefront}/api/product/cart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+
+      const productCartBody = await productCartRes.text();
+      if (!productCartRes.ok) {
+        console.error("[Medusa checkout] Photos-to-Paintings /api/product/cart failed", {
+          status: productCartRes.status,
+          body: productCartBody,
+        });
+        let details = productCartBody;
+        try {
+          const parsed = JSON.parse(productCartBody);
+          details = parsed.message || parsed.details || parsed.error || productCartBody;
+        } catch {
+          // keep raw body
+        }
+        res.status(productCartRes.status >= 500 ? 502 : productCartRes.status).json({
+          error: "Failed to create checkout",
+          details: String(details),
+        });
+        return;
+      }
+
+      const productCartData = JSON.parse(productCartBody) as { success?: boolean; cartId?: string };
+      const cartId = productCartData.cartId;
+      if (!cartId) {
+        console.error("[Medusa checkout] No cartId in Photos-to-Paintings response", productCartData);
+        res.status(502).json({
+          error: "Failed to create checkout",
+          details: "Invalid response from storefront",
+        });
+        return;
+      }
+
+      const validLocales = ["de", "fr", "es", "it", "pt", "ko", "ja"];
+      const pathPrefix = locale && validLocales.includes(locale) ? `/${locale}` : "";
+      const params = new URLSearchParams({ cart_id: cartId });
+      if (productTitle) params.set("pt", productTitle);
+      if (productStyle) params.set("ps", productStyle);
+      if (productType) params.set("ptype", productType);
+      if (productSize) params.set("psize", productSize);
+      const checkoutUrl = `${medusaStorefront}${pathPrefix}/checkout?${params.toString()}`;
+      res.json({ checkoutUrl, cartId });
+    } catch (error) {
+      console.error("Medusa checkout error:", error);
+      res.status(500).json({
+        error: "Failed to create checkout",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
     }
   });
 

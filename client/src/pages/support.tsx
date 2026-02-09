@@ -10,7 +10,7 @@ export default function Support() {
     <div className="flex-1 py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 font-serif italic">Get Support</h1>
+          <h1 className="text-4xl font-bold mb-4 font-display">Get Support</h1>
           <p className="text-muted-foreground text-lg">
             We're here to help. Reach out and we'll get back to you as soon as possible.
           </p>

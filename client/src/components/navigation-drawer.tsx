@@ -128,7 +128,7 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
                     >
                       <cat.icon className="w-4 h-4" />
                       <span>{cat.label}</span>
-                      {cat.id === "kids" && (
+                      {cat.id === "pets" && (
                         <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-xs bg-amber-400 text-amber-900">
                           New
                         </Badge>

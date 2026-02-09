@@ -1,11 +1,16 @@
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { ArtStyle } from "@shared/schema";
+import type { Category } from "@/lib/category-context";
 
 interface TransformationData {
   originalImage: string;
   transformedImage: string;
   style: ArtStyle;
   styleName: string;
+  /** Category for Medusa product handle (e.g. kids, pets). Defaults to "pets" on result if missing. */
+  category?: Category;
+  /** Transformation ID for checkout metadata (previewImageUrl, productTitle) */
+  transformationId?: string;
 }
 
 interface TransformationContextType {
