@@ -98,7 +98,7 @@
     "royal_noble": {
       "id": "royal_noble",
       "label": "Royal",
-      "concept": "THE SUBJECT IS A MONARCH. Absolute royalty in every detail.",
+      "concept": "DRESS and COMPOSE the subject as royalty — regal attire, royal setting, sovereign atmosphere. Do NOT change the subject's face, hair, facial hair, or expression.",
       "attire_humans": {
         "instruction": "Luxurious royal garments — vary the combination creatively each time.",
         "garments": ["Heavy robes, capes, mantles in jewel tones — burgundy, plum, navy, emerald, royal purple, crimson, midnight blue"],
@@ -138,7 +138,7 @@
     "neoclassical": {
       "id": "neoclassical",
       "label": "Neoclassical",
-      "concept": "THE SUBJECT IS A GREEK/ROMAN DEITY OR MUSE. Timeless classical beauty.",
+      "concept": "DRESS and COMPOSE the subject in Greco-Roman classical style — toga, laurel, marble setting, timeless beauty. Do NOT change the subject's face, hair, facial hair, or expression.",
       "attire_humans": {
         "instruction": "Classical garments — vary creatively.",
         "garments": ["Toga", "chiton", "himation", "peplos", "stola — white, cream, ivory with colored accents"],
@@ -146,7 +146,7 @@
         "crown": "ALWAYS PRESENT: laurel wreath, olive crown, gold diadem, vine crown, myrtle wreath, golden stephane",
         "clasps": ["Gold fibula", "ornate brooch", "lion-head pin", "cameo", "serpent pin"],
         "jewelry": ["Gold cuff", "arm band", "signet ring", "chain with pendant (owl, lyre, sun, dolphin, eagle)", "anklet"],
-        "hair": "Classical: loose curls with gold pins, braided updo, ribboned plaits, jeweled headband",
+        "hair": "DO NOT change the subject's hairstyle — keep it exactly as in the photo. May add small classical accessories (gold pins, vine, thin headband) ON TOP of the existing hairstyle without altering it.",
         "children": "White tunic, small wreath or floral crown, gold pendant"
       },
       "attire_animals": {
@@ -176,7 +176,7 @@
     "heritage": {
       "id": "heritage",
       "label": "Heritage",
-      "concept": "THE SUBJECT IS OLD MONEY ARISTOCRACY. Understated generational wealth.",
+      "concept": "DRESS and COMPOSE the subject as old-money aristocracy — understated generational wealth, tailored period clothing, ancestral estate setting. Do NOT change the subject's face, hair, facial hair, or expression.",
       "attire_humans": {
         "instruction": "Impeccably tailored period clothing — vary creatively.",
         "men": ["Frock coat", "morning coat", "hunting jacket", "Norfolk jacket", "riding coat", "double-breasted blazer", "waistcoat in subtle pattern", "silk cravat/ascot/bow tie with pin", "crisp high-collar shirt"],

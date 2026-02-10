@@ -42,9 +42,21 @@ const t = raw as unknown as {
 export function getIdentityAnchor(category?: string): string {
   const isPet = category === "pets";
   if (isPet) {
-    return `Preserve the subject's exact breed, fur color/pattern, markings, ear shape, eye color, and body proportions from the original photo. ${t.identity.humans}`;
+    return `CRITICAL IDENTITY RULE: Preserve the subject's exact breed, fur color/pattern, markings, ear shape, eye color, body proportions, and facial expression from the original photo. Do NOT alter, idealize, or stylize any physical feature.`;
   }
-  return `Preserve the subject's exact facial features, face shape, eye color, skin tone, hairstyle and hair color from the original photo — do not alter or idealize them.`;
+  return `CRITICAL IDENTITY RULE: Preserve the subject's EXACT facial features, face shape, bone structure, eye color, eye shape, nose shape, lip shape, skin tone, skin texture, facial hair (beard, mustache, stubble — keep or remove NOTHING), hairstyle, hair color, hair length, and facial expression from the original photo. The face in the output must be recognizable as the SAME person. Do NOT alter, idealize, beautify, age, de-age, or stylize ANY facial or hair feature. The expression must match the original photo exactly — do not make the subject smile, look serious, or change their gaze direction.`;
+}
+
+/**
+ * Strong identity guard — placed at the START of prompts to prevent the model
+ * from altering faces, hair, or expressions. More assertive than the anchor.
+ */
+export function getIdentityGuard(category?: string): string {
+  const isPet = category === "pets";
+  if (isPet) {
+    return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT'S APPEARANCE: The animal's face, body, breed, fur, markings, ear shape, eye color, and expression must be pixel-level faithful to the input photo. Change ONLY the art medium, background, lighting, and any requested attire/accessories. The subject's physical appearance is LOCKED.`;
+  }
+  return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT'S FACE, HAIR, OR EXPRESSION: The person's facial features, face shape, skin tone, facial hair, hairstyle, hair color, and facial expression must be pixel-level faithful to the input photo. Change ONLY the art medium, clothing/attire, background, and lighting. The subject's face and hair are LOCKED — treat them as a sacred reference that cannot be altered, idealized, or stylized in any way.`;
 }
 
 /** Format block — format.full_bleed + critical_rules (museum) + format.negative_prompt from JSON. */
@@ -59,7 +71,8 @@ Format — SUBJECT 60-70% & FULL BLEED (artwork covers 100% of surface):
 ${t.format.full_bleed.rule} ${t.format.full_bleed.paper_styles} Show ONLY the artwork — no frame, no canvas/paper edge, no wall, no easel. Animals ALERT and DIGNIFIED.
 
 Negative prompt (always apply):
-${t.format.negative_prompt}`;
+${t.format.negative_prompt}
+No altered facial features, no changed facial expression, no changed hairstyle, no added or removed facial hair, no idealized or beautified face, no aged or de-aged face, no changed skin tone, no changed eye color, no changed nose shape, no changed lip shape.`;
 }
 
 /** Style block — styles[id] from JSON: medium + technique + coverage + negative_prompt. */

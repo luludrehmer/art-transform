@@ -7,7 +7,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { setupAuth, isAuthenticated } from "./auth";
 import { generateGalleryImage } from "./generate-gallery";
 import sharp from "sharp";
-import { getFormatBlock, getIdentityAnchor, getStyleBlock } from "@shared/build-prompt-from-template";
+import { getFormatBlock, getIdentityAnchor, getIdentityGuard, getStyleBlock } from "@shared/build-prompt-from-template";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
@@ -64,13 +64,13 @@ function buildPrompt(style: string, category?: string, stylePresetPrompt?: strin
   const styleSuffix = getStyleBlock(style);
   const formatBlock = getFormatBlock();
   const identityAnchor = getIdentityAnchor(category);
+  const identityGuard = getIdentityGuard(category);
   const trimmedPreset = stylePresetPrompt?.trim();
   if (trimmedPreset) {
     const vision = normalizePromptText(trimmedPreset);
-    return `Transform this ${categoryLabel} photo into an artwork that fulfills this exact vision: ${vision}. The result must be a realistic handmade ${technique} using authentic ${technique} techniques.${styleSuffix}${formatBlock}`;
+    return `${identityGuard}\n\nTransform this ${categoryLabel} photo into an artwork that fulfills this exact vision: ${vision}. The result must be a realistic handmade ${technique} using authentic ${technique} techniques.${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
   }
-  const base = `Transform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques. ${identityAnchor}`;
-  return base + styleSuffix + formatBlock;
+  return `${identityGuard}\n\nTransform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques. ${identityAnchor}${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
 }
 
 const transformWithGemini = async (
