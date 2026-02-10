@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useParams, useLocation } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +26,18 @@ import { allStyles, styleData, handmadeCardContent } from "@/lib/styles";
 import { addWatermark } from "@/lib/watermark";
 import { optimizeImageForUpload } from "@/lib/image-optimize";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useCategory, type Category } from "@/lib/category-context";
-import { galleryImages } from "@/lib/gallery-images";
+import { StylePicker } from "@/components/style-picker";
+import { getGalleryImages } from "@/lib/gallery-images";
 import { PRINT_SIZES } from "@/lib/print-prices";
+import { resolveStylePresetPrompt, type StylePresetId } from "@/lib/style-presets";
+import {
+  MOOD_SLUG_TO_ID,
+  getMoodSlugForUrl,
+  isValidMoodSlug,
+  isValidStyleId,
+} from "@/lib/url-variants";
 import type { ArtStyle } from "@shared/schema";
 
 type FlowStep = "upload" | "preview" | "download";
@@ -62,7 +72,7 @@ const categoryContent: Record<Category, {
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Pet's Photo",
     photoTip: "Clear, bright photos work best",
-    trustText: "#1 in Pet Portraits",
+    trustText: "#1 in Handmade Portraits",
   },
   family: {
     categoryTitle: "FAMILY PORTRAITS",
@@ -74,7 +84,7 @@ const categoryContent: Record<Category, {
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Family Photo",
     photoTip: "Clear, bright photos work best",
-    trustText: "#1 in Family Portraits",
+    trustText: "#1 in Handmade Portraits",
   },
   kids: {
     categoryTitle: "KIDS PORTRAITS",
@@ -86,7 +96,7 @@ const categoryContent: Record<Category, {
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Child's Photo",
     photoTip: "Clear, bright photos work best",
-    trustText: "#1 in Kids Portraits",
+    trustText: "#1 in Handmade Portraits",
   },
   couples: {
     categoryTitle: "COUPLE PORTRAITS",
@@ -98,7 +108,7 @@ const categoryContent: Record<Category, {
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Couple Photo",
     photoTip: "Clear, bright photos work best",
-    trustText: "#1 in Couple Portraits",
+    trustText: "#1 in Handmade Portraits",
   },
   "self-portrait": {
     categoryTitle: "SELF-PORTRAITS",
@@ -110,15 +120,50 @@ const categoryContent: Record<Category, {
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Photo",
     photoTip: "Clear, bright photos work best",
-    trustText: "#1 in Self-Portraits",
+    trustText: "#1 in Handmade Portraits",
   },
 };
 
 export default function Home() {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const { activeCategory } = useCategory();
+  const [, setLocation] = useLocation();
+  const params = useParams<{ style?: string; mood?: string }>();
   const resultRef = useRef<HTMLDivElement>(null);
   const content = categoryContent[activeCategory];
+
+  const basePath = activeCategory === "pets" ? "/pets" : `/${activeCategory}`;
+
+  const [selectedStyle, setSelectedStyle] = useState<ArtStyle>("oil-painting");
+  const [selectedStylePreset, setSelectedStylePreset] = useState<StylePresetId>("none");
+
+  // Sync URL → state: style and mood (only royal, neoclassical, heritage have a mood segment; classic/smart-pick = no segment)
+  useEffect(() => {
+    const styleFromUrl = params.style;
+    if (styleFromUrl && isValidStyleId(styleFromUrl)) {
+      setSelectedStyle(styleFromUrl);
+    }
+  }, [params.style]);
+
+  useEffect(() => {
+    if (params.mood && isValidMoodSlug(params.mood)) {
+      setSelectedStylePreset(MOOD_SLUG_TO_ID[params.mood]);
+    }
+  }, [params.mood]);
+
+  const setSelectedStyleAndUrl = (style: ArtStyle) => {
+    setSelectedStyle(style);
+    const slug = getMoodSlugForUrl(selectedStylePreset);
+    setLocation(slug ? `${basePath}/${style}/${slug}` : `${basePath}/${style}`);
+  };
+
+  const handleStylePresetSelect = (presetId: StylePresetId) => {
+    setSelectedStylePreset(presetId);
+    const slug = getMoodSlugForUrl(presetId);
+    setLocation(slug ? `${basePath}/${selectedStyle}/${slug}` : `${basePath}/${selectedStyle}`);
+  };
+
   const [priceData, setPriceData] = useState<{
     digital?: Record<string, number>;
     print?: Record<string, number>;
@@ -161,7 +206,6 @@ export default function Home() {
   }));
   
   const [currentStep, setCurrentStep] = useState<FlowStep>("upload");
-  const [selectedStyle, setSelectedStyle] = useState<ArtStyle>("oil-painting");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [transformedImage, setTransformedImage] = useState<string | null>(null);
@@ -255,6 +299,7 @@ export default function Home() {
       progressInterval = setInterval(() => {
         setProgress((prev) => {
           if (prev < 90) return Math.min(prev + 1.5, 90);
+          if (prev < 98) return Math.min(prev + 0.35, 98);
           return prev;
         });
       }, 500);
@@ -291,6 +336,12 @@ export default function Home() {
         height = dims.height;
       }
 
+      const mediumName = styleData[selectedStyle]?.name ?? "oil painting";
+      const stylePresetPrompt = resolveStylePresetPrompt(selectedStylePreset, mediumName, activeCategory);
+      if (process.env.NODE_ENV === "development" && stylePresetPrompt) {
+        console.log("[transform] preset:", selectedStylePreset, "medium:", mediumName, "prompt preview:", stylePresetPrompt.slice(0, 120) + "…");
+      }
+
       const response = await fetch("/api/transform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -301,6 +352,7 @@ export default function Home() {
           category: activeCategory,
           width,
           height,
+          ...(stylePresetPrompt && { stylePresetPrompt }),
         }),
       });
 
@@ -312,10 +364,12 @@ export default function Home() {
       const result = await response.json();
       const transformationId = result.transformationId;
 
+      const pollIntervalMs = 400;
+      const maxAttempts = selectedStylePreset && selectedStylePreset !== "none" ? 120 : 60;
+
       const pollTransformation = (): Promise<void> => {
         return new Promise((resolve, reject) => {
           let attempts = 0;
-          const maxAttempts = 60;
 
           const checkStatus = async () => {
             try {
@@ -349,9 +403,9 @@ export default function Home() {
                 const msg = transformation.errorMessage || "Transformation failed on server";
                 reject(new Error(msg));
               } else if (attempts < maxAttempts) {
-                setTimeout(checkStatus, 300);
+                setTimeout(checkStatus, pollIntervalMs);
               } else {
-                reject(new Error("Transformation timeout"));
+                reject(new Error("Transformation timeout — mood styles can take longer. Please try again."));
               }
             } catch (error) {
               reject(error);
@@ -446,8 +500,8 @@ export default function Home() {
   };
 
   const handleTryStyle = (styleId: ArtStyle) => {
+    setSelectedStyleAndUrl(styleId);
     if (selectedFile && previewUrl) {
-      setSelectedStyle(styleId);
       setTransformedImage(null);
       setCurrentStep("upload");
       handleTransform(selectedFile, previewUrl);
@@ -460,42 +514,29 @@ export default function Home() {
       <div className="container px-4 py-6 mx-auto max-w-5xl">
         <p className="text-center text-xs text-muted-foreground mb-1 md:mb-2">{content.flowTagline}</p>
 
-        <div className="text-center mb-2 md:mb-3">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 font-display font-display-hero text-balance max-w-2xl mx-auto">
-            <span className="block">{content.headlineLine1}</span>
-            <span className="block">{content.headlineLine2}</span>
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {content.subheadline}
-          </p>
-        </div>
+        {!transformedImage && (
+          <div className="text-center mb-2 md:mb-3">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 font-display font-display-hero text-balance max-w-2xl mx-auto">
+              <span className="block">{content.headlineLine1}</span>
+              <span className="block">{content.headlineLine2}</span>
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              {content.subheadline}
+            </p>
+          </div>
+        )}
 
         {(currentStep === "upload" || isTransforming) && (
           <Card className="p-3 md:p-4 mb-2 md:mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Palette className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{content.step1Text}</span>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {allStyles.map((style) => (
-                <button
-                  key={style.id}
-                  onClick={() => setSelectedStyle(style.id)}
-                  disabled={isTransforming}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                    selectedStyle === style.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover-elevate"
-                  )}
-                  data-testid={`button-style-${style.id}`}
-                >
-                  {style.name}
-                </button>
-              ))}
+            <div className="mb-3 flex justify-start">
+              <StylePicker
+                selectedStyle={selectedStyle}
+                onSelect={setSelectedStyleAndUrl}
+                selectedStylePreset={selectedStylePreset}
+                onStylePresetSelect={handleStylePresetSelect}
+                disabled={isTransforming}
+                stepLabel={content.step1Text}
+              />
             </div>
 
             {!isTransforming ? (
@@ -553,7 +594,58 @@ export default function Home() {
 
         {!transformedImage && (
           <>
-            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 py-0.5 mb-0.5">
+            {/* Mobile: row 1 = avatars left, Trusted by 2,000+ right; row 2 = Reviews.io + #1 category */}
+            <div className="md:hidden flex flex-col gap-3 mb-4">
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center -space-x-2.5 flex-shrink-0">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <img
+                      key={i}
+                      src={`https://pub-ec72d28400074017a168ab75baec0ff4.r2.dev/avatars/customer${i}.webp`}
+                      alt="Happy customer"
+                      width={36}
+                      height={36}
+                      className="w-9 h-9 rounded-full border-2 border-background object-cover shadow-sm"
+                    />
+                  ))}
+                </div>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <div className="flex items-center gap-1">
+                    <img
+                      src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/reviewsukgif.gif?v=1764164124"
+                      alt="5 star rating"
+                      className="h-4 w-auto object-contain"
+                      loading="eager"
+                      decoding="async"
+                    />
+                    <span className="text-sm font-bold text-foreground">4.8/5</span>
+                  </div>
+                  <div className="rounded-full border border-green-300 bg-green-50 px-2.5 py-0.5 inline-flex items-center">
+                    <span className="text-[10px] font-semibold text-green-800">Trusted by 2,000+</span>
+                    <span className="text-[10px] text-green-700 ml-1">happy customers</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 py-0.5">
+                <a
+                  href="https://www.reviews.co.uk/product-reviews/store/art-and-see.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center shrink-0"
+                >
+                  <img
+                    src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/badge2.gif?v=1764167405"
+                    alt="Reviews.io Verified Company"
+                    className="h-7 w-auto object-contain"
+                    loading="eager"
+                    decoding="async"
+                  />
+                </a>
+                <span className="text-xs text-muted-foreground font-medium">{content.trustText}</span>
+              </div>
+            </div>
+            {/* Desktop: full social proof row */}
+            <div className="hidden md:flex flex-wrap items-center justify-center gap-2 md:gap-4 py-0.5 mb-0.5">
               <div className="flex items-center gap-2">
                 <a
                   href="https://www.reviews.co.uk/product-reviews/store/art-and-see.com"
@@ -592,22 +684,23 @@ export default function Home() {
                     />
                     <span className="text-sm font-bold text-foreground">4.8/5</span>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">Trusted by 2,000+</span> happy customers
+                  <div className="rounded-full border border-green-300 bg-green-50 px-2.5 py-0.5 inline-flex items-center">
+                    <span className="text-xs font-semibold text-green-800">Trusted by 2,000+</span>
+                    <span className="text-xs text-green-700 ml-1">happy customers</span>
                   </div>
                 </div>
               </div>
             </div>
-            <p className="text-center text-xs text-muted-foreground m-0 mb-4 leading-tight">{content.trustText}</p>
+            <p className="hidden md:block text-center text-xs text-muted-foreground m-0 mb-4 leading-tight">{content.trustText}</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              {galleryImages[activeCategory][selectedStyle].map((image, index) => (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+              {(isMobile ? getGalleryImages(activeCategory, selectedStyle, selectedStylePreset).slice(0, 2) : getGalleryImages(activeCategory, selectedStyle, selectedStylePreset)).map((image, index) => (
                 <div
                   key={index}
                   className="aspect-[3/4] rounded-xl overflow-hidden hover-elevate cursor-pointer"
                   data-testid={`gallery-${activeCategory}-${selectedStyle}-${index}`}
                 >
-                  <img src={image} alt={`${activeCategory} ${selectedStyle} portrait ${index + 1}`} className="w-full h-full object-cover" loading={index < 3 ? "eager" : "lazy"} fetchPriority={index < 3 ? "high" : "low"} />
+                  <img src={image} alt={`${activeCategory} ${selectedStyle} portrait ${index + 1}`} className="w-full h-full object-cover" loading={index < 3 ? "eager" : "lazy"} fetchpriority={index < 3 ? "high" : "low"} />
                 </div>
               ))}
             </div>

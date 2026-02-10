@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Crown, LogOut, User, PawPrint, Users, Smile, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -37,7 +36,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         </Link>
 
         <nav
-          className="hidden md:flex items-center justify-center"
+          className="flex items-center justify-center justify-self-center"
           aria-label="Categories"
         >
           <div className="flex items-center gap-1 rounded-full border bg-nav-pill-bg p-1">
@@ -53,9 +52,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             >
               <PawPrint className="w-4 h-4" />
               Pets
-              <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs bg-amber-400 text-amber-900">
-                New
-              </Badge>
             </Button>
             <Button
               variant={activeCategory === "family" ? "default" : "ghost"}
@@ -87,7 +83,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               variant={activeCategory === "couples" ? "default" : "ghost"}
               size="sm"
               className={cn(
-                "rounded-full gap-2",
+                "rounded-full gap-2 hidden md:inline-flex",
                 activeCategory !== "couples" && "text-muted-foreground"
               )}
               onClick={() => setActiveCategory("couples")}
@@ -100,7 +96,7 @@ export function Header({ onMenuClick }: HeaderProps) {
               variant={activeCategory === "self-portrait" ? "default" : "ghost"}
               size="sm"
               className={cn(
-                "rounded-full gap-2",
+                "rounded-full gap-2 hidden md:inline-flex",
                 activeCategory !== "self-portrait" && "text-muted-foreground"
               )}
               onClick={() => setActiveCategory("self-portrait")}

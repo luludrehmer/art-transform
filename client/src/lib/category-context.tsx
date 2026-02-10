@@ -3,14 +3,15 @@ import { useLocation } from "wouter";
 
 export type Category = "pets" | "family" | "kids" | "couples" | "self-portrait";
 
-const categoryRoutes: Record<string, Category> = {
-  "/": "pets",
-  "/pets": "pets",
-  "/family": "family",
-  "/kids": "kids",
-  "/couples": "couples",
-  "/self-portrait": "self-portrait",
-};
+const CATEGORY_SEGMENTS: Category[] = ["pets", "family", "kids", "couples", "self-portrait"];
+
+/** Derive category from path: /pets, /pets/oil-painting, /family/watercolor, etc. */
+function categoryFromPath(path: string): Category {
+  const segment = path.replace(/^\/+/, "").split("/")[0] || "";
+  if (segment === "" || segment === "pets") return "pets";
+  if (CATEGORY_SEGMENTS.includes(segment as Category)) return segment as Category;
+  return "pets";
+}
 
 interface CategoryContextType {
   activeCategory: Category;
@@ -22,14 +23,12 @@ const CategoryContext = createContext<CategoryContextType | undefined>(undefined
 export function CategoryProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
   const [activeCategory, setActiveCategoryState] = useState<Category>(() => {
-    return categoryRoutes[location] || "pets";
+    return categoryFromPath(location);
   });
 
   useEffect(() => {
-    const categoryFromRoute = categoryRoutes[location];
-    if (categoryFromRoute && categoryFromRoute !== activeCategory) {
-      setActiveCategoryState(categoryFromRoute);
-    }
+    const categoryFromRoute = categoryFromPath(location);
+    setActiveCategoryState(categoryFromRoute);
   }, [location]);
 
   const setActiveCategory = (category: Category) => {

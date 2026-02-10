@@ -13,7 +13,6 @@ import { NavigationDrawer } from "@/components/navigation-drawer";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Result from "@/pages/result";
-import Pricing from "@/pages/pricing";
 import About from "@/pages/about";
 import Support from "@/pages/support";
 import Privacy from "@/pages/privacy";
@@ -26,12 +25,21 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/pets/:style/:mood" component={Home} />
+      <Route path="/pets/:style" component={Home} />
       <Route path="/pets" component={Home} />
+      <Route path="/family/:style/:mood" component={Home} />
+      <Route path="/family/:style" component={Home} />
       <Route path="/family" component={Home} />
+      <Route path="/kids/:style/:mood" component={Home} />
+      <Route path="/kids/:style" component={Home} />
       <Route path="/kids" component={Home} />
+      <Route path="/couples/:style/:mood" component={Home} />
+      <Route path="/couples/:style" component={Home} />
       <Route path="/couples" component={Home} />
+      <Route path="/self-portrait/:style/:mood" component={Home} />
+      <Route path="/self-portrait/:style" component={Home} />
       <Route path="/self-portrait" component={Home} />
-      <Route path="/pricing" component={Pricing} />
       <Route path="/about" component={About} />
       <Route path="/support" component={Support} />
       <Route path="/privacy" component={Privacy} />

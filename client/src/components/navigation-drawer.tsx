@@ -10,7 +10,6 @@ import {
   Smile, 
   Heart, 
   User,
-  DollarSign,
   LogIn,
   Info,
   MessageCircle,
@@ -138,19 +137,6 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
                 </div>
               )}
             </div>
-
-            <Link href="/pricing" onClick={handleNavClick}>
-              <div 
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md hover-elevate cursor-pointer",
-                  location === "/pricing" && "bg-accent"
-                )}
-                data-testid="nav-pricing"
-              >
-                <DollarSign className="w-5 h-5" />
-                <span>Pricing</span>
-              </div>
-            </Link>
 
             <Link href="/signin" onClick={handleNavClick}>
               <div 

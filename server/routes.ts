@@ -6,19 +6,10 @@ import { insertTransformationSchema } from "@shared/schema";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { setupAuth, isAuthenticated } from "./auth";
 import { generateGalleryImage } from "./generate-gallery";
+import sharp from "sharp";
+import { getFormatBlock, getIdentityAnchor, getStyleBlock } from "@shared/build-prompt-from-template";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
-
-const FORMAT_BLOCK = `
-
-Format:
-Output aspect ratio: 3:4 (portrait) or 2:3 (landscape) to match source image orientation
-Output must be a cropped end-to-end image—the artwork fills the entire frame edge to edge with no visible borders
-Show only the artwork surface—no frame, canvas edge, paper edge, wall, or easel
-Focus entirely on the medium and technique without external elements
-
-Negative prompt:
-No frames, no walls, no canvas edges, no paper edges, no canvas mounting, no easels, no hanging display, no room context, no visible borders or margins`;
 
 const categoryLabels: Record<string, string> = {
   pets: "pet portrait",
@@ -58,25 +49,37 @@ const typeDescriptions: Record<string, string> = {
   handmade: "Hand-painted by master artists on cotton-blend canvas.",
 };
 
-function buildPrompt(style: string, category?: string): string {
+/** Normalize prompt text: single spaces, no leading/trailing spaces per line. */
+function normalizePromptText(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Builds the full prompt for Gemini from prompt-template.json (v5.1).
+ * When a mood preset is set, its vision is placed first; technique (style) is then applied.
+ */
+function buildPrompt(style: string, category?: string, stylePresetPrompt?: string | null): string {
   const technique = styleTechniqueNames[style] || "oil painting";
   const categoryLabel = category && categoryLabels[category] ? categoryLabels[category] : "photo";
-  const base = `Transform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques.`;
-  return base + FORMAT_BLOCK;
+  const styleSuffix = getStyleBlock(style);
+  const formatBlock = getFormatBlock();
+  const identityAnchor = getIdentityAnchor(category);
+  const trimmedPreset = stylePresetPrompt?.trim();
+  if (trimmedPreset) {
+    const vision = normalizePromptText(trimmedPreset);
+    return `Transform this ${categoryLabel} photo into an artwork that fulfills this exact vision: ${vision}. The result must be a realistic handmade ${technique} using authentic ${technique} techniques.${styleSuffix}${formatBlock}`;
+  }
+  const base = `Transform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques. ${identityAnchor}`;
+  return base + styleSuffix + formatBlock;
 }
 
 const transformWithGemini = async (
   originalImageUrl: string,
   style: string,
-  category?: string
+  category?: string,
+  stylePresetPrompt?: string | null
 ): Promise<string> => {
   try {
-    // Note: aspectRatio is not supported in generationConfig for gemini-2.5-flash-image.
-    // The prompt FORMAT_BLOCK instructs 3:4 portrait or 2:3 landscape.
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash-image",
-    });
-
     // Extract base64 data from data URL
     const base64Match = originalImageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
     if (!base64Match) {
@@ -85,10 +88,32 @@ const transformWithGemini = async (
 
     const [, mimeType, base64Data] = base64Match;
 
-    const prompt = buildPrompt(style, category);
+    // Detect input image orientation to set correct aspect ratio
+    let aspectRatio = "3:4"; // default portrait
+    try {
+      const imgBuffer = Buffer.from(base64Data, "base64");
+      const metadata = await sharp(imgBuffer).metadata();
+      if (metadata.width && metadata.height && metadata.width > metadata.height) {
+        aspectRatio = "4:3"; // landscape
+      }
+      console.log(`[transform] image ${metadata.width}x${metadata.height} → aspectRatio ${aspectRatio}`);
+    } catch (e) {
+      console.log("[transform] could not detect image orientation, using 3:4");
+    }
 
-    // Generate content with image and prompt
-    const result = await model.generateContent([
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash-image",
+      generationConfig: {
+        responseModalities: ["TEXT", "IMAGE"],
+        imageConfig: { aspectRatio },
+      } as any,
+    });
+
+    const prompt = buildPrompt(style, category, stylePresetPrompt);
+    console.log("[transform] prompt preview:", prompt.slice(0, 200) + (prompt.length > 200 ? "…" : ""));
+
+    const GEMINI_TIMEOUT_MS = 90_000;
+    const generatePromise = model.generateContent([
       {
         inlineData: {
           data: base64Data,
@@ -97,6 +122,10 @@ const transformWithGemini = async (
       },
       { text: prompt },
     ]);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Gemini request timed out (90s)")), GEMINI_TIMEOUT_MS)
+    );
+    const result = await Promise.race([generatePromise, timeoutPromise]);
 
     console.log("Gemini API response received:", JSON.stringify({
       candidates: result.response.candidates?.length,
@@ -190,6 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category?: string;
         width?: number;
         height?: number;
+        stylePresetPrompt?: string | null;
       };
       const validatedData = insertTransformationSchema.parse({
         originalImageUrl: body.originalImageUrl,
@@ -199,6 +229,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const category = body.category;
       const width = body.width;
       const height = body.height;
+      const stylePresetPrompt = body.stylePresetPrompt ?? null;
+      console.log("[transform] received stylePresetPrompt:", stylePresetPrompt ? stylePresetPrompt.slice(0, 80) + "..." : "NONE");
 
       if (!validatedData.originalImageUrl || validatedData.originalImageUrl.length === 0) {
         res.status(400).json({ error: "Original image is required" });
@@ -215,7 +247,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const transformedImageUrl = await transformWithGemini(
             validatedData.originalImageUrl,
             validatedData.style,
-            category
+            category,
+            stylePresetPrompt
           );
           
           await storage.updateTransformation(transformation.id, {

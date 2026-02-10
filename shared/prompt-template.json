@@ -1,0 +1,325 @@
+{
+  "version": "5.1",
+  "description": "Single source of truth for all image-generation prompts. Transforms a user-uploaded photo into a museum-quality fine art portrait.",
+
+  "system": {
+    "role": "You are transforming a user-uploaded photo into a {MOOD} portrait, rendered in {STYLE}.",
+    "quality": "This must look like an authentic masterwork painting — not AI-generated, not a photo filter. Depth, drama, and craftsmanship of a commissioned portrait by a celebrated Old Masters painter. Every element — brushwork, light, fabric, background — must feel hand-painted with mastery.",
+    "subject_dominance": "The SUBJECT dominates 60-70% of the frame. The background is a PAINTED SCENE — artistically rendered with visible brushwork, not blurred like a photograph."
+  },
+
+  "subject_analysis": {
+    "detect": [
+      "Number of subjects (1, 2, 3+)",
+      "Type of each subject (human adult, human child, dog, cat, horse, other animal)",
+      "Distinctive features to preserve (hair color/style, fur color/pattern, breed, facial features, eye color)",
+      "Natural grouping/relationships visible in the photo"
+    ],
+    "separation_rules": {
+      "animals_only": "PET portrait. No human elements.",
+      "humans_only": "HUMAN portrait. No animal elements unless in source.",
+      "mixed": "MIXED portrait. Each keeps its nature.",
+      "never_add": "NEVER add subjects not in the original photo.",
+      "never_blend": "NEVER blend attributes between subject types."
+    }
+  },
+
+  "composition": {
+    "principle": "DYNAMIC COMPOSITION — vary pose and framing. Do NOT default to the same composition every time.",
+    "camera_angle": "At eye level or SLIGHTLY BELOW the subject — never looking down. Gives authority and grandeur.",
+    "single_subject": [
+      "Intimate bust: head and shoulders, close crop, intense eye contact",
+      "Classic three-quarter: head to waist, slight body angle, one hand visible",
+      "Seated full: full body on throne/chair/cushion/pedestal, regal posture",
+      "Standing grand: full body, one hand on hip or holding prop, commanding",
+      "Reclining noble: lounging gracefully, relaxed authority"
+    ],
+    "couples": [
+      "Intimate close: faces near each other, tender gesture, tight crop",
+      "Formal paired: seated together, slight height difference",
+      "Dynamic interaction: one standing, one seated"
+    ],
+    "groups": [
+      "Pyramidal classical: tallest center, others flanking",
+      "Conversational: natural grouping, some looking at viewer",
+      "Tiered: seated front, standing behind"
+    ],
+    "pets_alone": [
+      "Noble seated: upright on cushion/pedestal, dignified gaze",
+      "Reclining lord: lying gracefully, head raised, alert",
+      "Standing proud: four legs, slight turn, noble bearing"
+    ],
+    "mixed_human_pet": [
+      "Pet held, at feet, or beside — integrated companion",
+      "Both looking at viewer, or human looking at pet with affection"
+    ]
+  },
+
+  "painting_quality": {
+    "brushwork": {
+      "strokes": "Visible, confident brushstrokes — impasto on highlights, smooth glazes on skin/fur",
+      "canvas": "Canvas texture subtly visible in darker areas",
+      "depth": "Paint has PHYSICAL DEPTH — layers you can almost feel",
+      "aging": "Craquelure — fine network of cracks suggesting centuries of age",
+      "varnish": "Slight warm varnish sheen — amber glow of aged oil varnish",
+      "wear": "Edges show slight wear, paint chips, or darkened patina"
+    },
+    "skin_fur": {
+      "skin": "Translucent luminosity — subsurface scattering. Warm pinks, cool blues in shadows, golden highlights.",
+      "fur": "Hair-by-hair in highlights, softer in shadow — individual strands catch light.",
+      "eyes": "Sharpest point — crystalline detail, catchlight, depth."
+    },
+    "fabric": {
+      "velvet": "WEIGHT and DEPTH — feel the pile, light dies into it",
+      "silk": "Sharp white highlights against deep color",
+      "lace": "Intricate, each thread suggested",
+      "fur_trim": "Individual hairs, spotted pattern, softness",
+      "embroidery": "Gold catches light on raised threads",
+      "drape": "Follows gravity, bunches at joints, pools on surfaces"
+    },
+    "lighting": {
+      "primary": "Warm upper-left, strong, directional — torch or high window",
+      "rembrandt": "Rembrandt triangle on human faces",
+      "chiaroscuro": "Deep blacks meet luminous highlights with rich midtone transitions",
+      "rim_light": "Edge light separating subject from background — hair, shoulders, fur edges",
+      "fill": "Secondary cooler fill barely visible from opposite side",
+      "warmth": "Golden amber quality of candlelight or late afternoon sun",
+      "specular": "Small bright sharp highlights on jewelry, eyes, wet surfaces",
+      "brightness": "Subject 2-3 stops brighter than background — GLOWS against the dark"
+    },
+    "overall_feel": {
+      "standard": "Indistinguishable from National Gallery or Met painting",
+      "history": "Looks like it has HISTORY — aged, varnished, slightly darkened with time",
+      "masters": "Gravitas of Thomas Lawrence, Joshua Reynolds, Thomas Gainsborough, Élisabeth Vigée Le Brun, Rembrandt, Velázquez, Anthony van Dyck"
+    }
+  },
+
+  "moods": {
+    "royal_noble": {
+      "id": "royal_noble",
+      "label": "Royal",
+      "concept": "THE SUBJECT IS A MONARCH. Absolute royalty in every detail.",
+      "attire_humans": {
+        "instruction": "Luxurious royal garments — vary the combination creatively each time.",
+        "garments": ["Heavy robes, capes, mantles in jewel tones — burgundy, plum, navy, emerald, royal purple, crimson, midnight blue"],
+        "fur_trim": ["Ermine with black spots", "sable", "mink", "white fox — prominent and luxurious"],
+        "embroidery": ["Gold/silver thread", "heraldic motifs", "floral patterns", "royal crests", "lions", "eagles", "fleur-de-lis", "thistles"],
+        "lace": ["Belgian", "Venetian", "French — on collar, cuffs, décolletage"],
+        "headpiece": "ALWAYS PRESENT: crown, tiara, diadem, coronet, jeweled circlet",
+        "jewelry": "Layer multiple pieces: necklaces, pendants, brooches, rings, chains of office, medallions, chokers. Mix gold, pearls, rubies, sapphires, emeralds.",
+        "hand_props": ["scepter", "orb", "royal flower", "jeweled fan", "sealed letter", "velvet glove", "portrait miniature"],
+        "fabrics": ["velvet", "silk brocade", "damask", "satin", "taffeta"],
+        "children": "Miniature royal — small crown, scaled robe, delicate jewelry"
+      },
+      "attire_animals": {
+        "mantle": "Heavy mantle/cape — vary color, fabric, trim each time",
+        "headpiece": "Small crown, coronet, circlet, tiara",
+        "neck": "Jeweled collar, gold chain with medallion, chain of office, pearl strand",
+        "embroidery": "Heraldic on mantle — lions, eagles, crowns, crests",
+        "fur_trim": "Ermine, sable, white fur edging",
+        "surface": "Ornate cushion — vary damask, velvet, silk; vary colors; tassels or fringe"
+      },
+      "background": {
+        "type": "PAINTED OLD MASTERS SCENE",
+        "description": "Deep, rich darkness — NOT flat black. A PAINTED environment.",
+        "elements": [
+          "Heavy velvet curtains with visible fabric folds, pulled to one side",
+          "Glimpse of darkened palace interior — column, archway, distant window",
+          "OR: dramatic clouded sky through opening — stormy, Turner-esque"
+        ],
+        "technique": "Visible brushstrokes — loose, atmospheric, suggestive",
+        "depth": "DARKER than subject but with DETAIL and DEPTH — a scene, not a void",
+        "shadow_colors": "Deep navy, umber, warm black, hints of burgundy"
+      },
+      "lighting": "Intense theatrical Caravaggio-level chiaroscuro. Strong warm upper-left. Subject glows against deep shadow.",
+      "palette": ["burgundy", "navy", "gold", "ivory", "ermine white", "deep purple", "crimson", "black"]
+    },
+
+    "neoclassical": {
+      "id": "neoclassical",
+      "label": "Neoclassical",
+      "concept": "THE SUBJECT IS A GREEK/ROMAN DEITY OR MUSE. Timeless classical beauty.",
+      "attire_humans": {
+        "instruction": "Classical garments — vary creatively.",
+        "garments": ["Toga", "chiton", "himation", "peplos", "stola — white, cream, ivory with colored accents"],
+        "accents": ["Terracotta", "olive", "gold", "dusty rose", "Tyrian purple", "sage sash/stole"],
+        "crown": "ALWAYS PRESENT: laurel wreath, olive crown, gold diadem, vine crown, myrtle wreath, golden stephane",
+        "clasps": ["Gold fibula", "ornate brooch", "lion-head pin", "cameo", "serpent pin"],
+        "jewelry": ["Gold cuff", "arm band", "signet ring", "chain with pendant (owl, lyre, sun, dolphin, eagle)", "anklet"],
+        "hair": "Classical: loose curls with gold pins, braided updo, ribboned plaits, jeweled headband",
+        "children": "White tunic, small wreath or floral crown, gold pendant"
+      },
+      "attire_animals": {
+        "drape": "Linen/silk loosely over shoulders, toga-like but natural",
+        "crown": "Laurel, olive branch, vine, small gold diadem",
+        "neck": "Gold chain with classical medallion (owl, eagle, sun, lyre), woven cord, pearl strand",
+        "surface": "Carved marble pedestal with classical relief"
+      },
+      "background": {
+        "type": "PAINTED ROMANTIC LANDSCAPE",
+        "style_reference": "Claude Lorrain, Nicolas Poussin, Thomas Cole",
+        "elements": [
+          "Rolling Tuscan/Greek hills — atmospheric perspective, multiple depth layers",
+          "Ancient trees — gnarled trunks, wind-swept, expressive brushwork",
+          "Dramatic golden-hour sky — peach, amber, pink clouds lit from below",
+          "Classical ruins — broken column, archway, temple fragment on distant hill",
+          "Soft ground — wild grasses, wildflowers, mossy stone"
+        ],
+        "narrative": "Golden age — idyllic, timeless, mythical",
+        "technique": "VISIBLE BRUSHSTROKES — painterly, not photographic",
+        "atmosphere": "Haze increases with distance — foreground detailed, far background dissolved"
+      },
+      "lighting": "Warm golden Mediterranean, late afternoon sun. Sfumato on skin. Warm edge light on crown/wreath and hair/fur edges — luminous separation from background (NOT a religious halo — a lighting technique: bright warm rim light on top/edges, not a circle).",
+      "palette": ["warm gold", "ochre", "terracotta", "olive", "cream", "marble white", "sage", "sky blue"]
+    },
+
+    "heritage": {
+      "id": "heritage",
+      "label": "Heritage",
+      "concept": "THE SUBJECT IS OLD MONEY ARISTOCRACY. Understated generational wealth.",
+      "attire_humans": {
+        "instruction": "Impeccably tailored period clothing — vary creatively.",
+        "men": ["Frock coat", "morning coat", "hunting jacket", "Norfolk jacket", "riding coat", "double-breasted blazer", "waistcoat in subtle pattern", "silk cravat/ascot/bow tie with pin", "crisp high-collar shirt"],
+        "women": ["Structured high-collar dress", "riding habit", "tea gown", "tailored jacket", "draped shawl", "raw silk", "fine wool", "cashmere", "taffeta", "subtle brocade"],
+        "accessories": ["Cashmere shawl", "fur stole", "leather gloves", "riding crop", "leather-bound book", "pocket watch", "lorgnette", "cameo brooch", "pearls", "ivory fan", "lace handkerchief"],
+        "jewelry": "Understated heirlooms: signet ring, pearl earrings, thin gold bracelet, brooch, pocket watch chain, tie pin, cufflinks",
+        "colors": "ALWAYS muted: charcoal, camel, hunter green, oxblood, navy, slate, dusty rose, taupe, cream",
+        "quality": "Everything INHERITED — patina of generations, not new",
+        "children": "Peter Pan collar, sailor suit, pinafore, knee shorts, smocked dress, hair ribbon"
+      },
+      "attire_animals": {
+        "principle": "Heritage animals are NOT bare — VISIBLE, high-quality accessories communicating old-money refinement.",
+        "collar": "ALWAYS PRESENT: fine leather (oxblood, British tan, dark brown) with brass buckle and crest tag; OR tartan (Stewart, Blackwatch) with gold charm; OR pearl-studded with pendant",
+        "additional": ["Tweed vest/coat (herringbone, houndstooth)", "cashmere blanket over haunches", "silk neckerchief/bow in muted tones"],
+        "props_nearby": ["Leather-bound book", "riding crop", "top hat", "pocket watch on chain", "worn leather gloves"],
+        "grooming": "Impeccably groomed to a sheen — coat brushed, ears clean, nails trimmed",
+        "positioning": "Prized estate companion — on Persian rug, beside Chesterfield, on leather armchair, on tartan blanket"
+      },
+      "background": {
+        "type": "PAINTED ENGLISH/EUROPEAN SETTING",
+        "priority": "SECONDARY to subject. All elements SUGGESTED with soft atmospheric brushwork — loose color masses and implied shapes, NOT sharp details. 3-4 feet behind subject. Think: Gainsborough or Reynolds backgrounds.",
+        "interior": {
+          "label": "Dark wood-paneled study or library — SOFTLY suggested",
+          "elements": [
+            "Books — blurred color masses on shelves, not individually readable",
+            "Ancestral portrait — dim shape in gilt frame, barely discernible",
+            "Fireplace — warm amber glow, suggested not rendered",
+            "Heavy curtains — dark folds, loose brushwork",
+            "Persian rug — muted pattern, soft focus",
+            "Furniture — dark masses in shadow, implied not defined"
+          ]
+        },
+        "exterior": {
+          "label": "English/Scottish countryside — ATMOSPHERIC",
+          "elements": [
+            "Overcast sky, soft cloud formations",
+            "Rolling greens dissolving into mist, trees as soft shapes",
+            "Stone manor as tiny atmospheric silhouette, far away"
+          ]
+        },
+        "brightness": "2-3 stops DARKER than subject — subject pops forward",
+        "technique": "Loose, atmospheric Old Masters brushwork — never competing with subject"
+      },
+      "lighting": "Cool natural side light from tall sash windows. Refined. Warm amber from fireplace. Enough contrast to sculpt the face.",
+      "palette": ["charcoal", "taupe", "hunter green", "oxblood", "cream", "burnished gold", "tobacco", "slate"]
+    }
+  },
+
+  "styles": {
+    "universal_rule": "Artwork covers 100% of image surface. All four corners and edges have content. Zero bare surface as border.",
+    "oil-painting": {
+      "id": "oil-painting",
+      "label": "Oil Painting",
+      "medium": "Oil on canvas",
+      "technique": "Old Masters: Rembrandt, Velázquez, Van Dyck, Reynolds, Gainsborough, Lawrence. Visible impasto on highlights, smooth glazes on shadows. Craquelure aging. Warm amber varnish. Canvas weave in dark areas.",
+      "feel": "Looks like a 200-year-old painting freshly cleaned and exhibited.",
+      "coverage": "Oil paint covers every inch of canvas edge to edge."
+    },
+    "acrylic": {
+      "id": "acrylic",
+      "label": "Acrylic",
+      "medium": "Acrylic on canvas",
+      "technique": "Bold saturated color, smooth-to-textured blending, contemporary realism with classical composition. Visible brush texture.",
+      "coverage": "Paint covers every inch of canvas edge to edge."
+    },
+    "pencil-sketch": {
+      "id": "pencil-sketch",
+      "label": "Pencil Sketch",
+      "medium": "Graphite pencil on textured paper",
+      "technique": "Fine hatching, cross-hatching, tonal gradations. Paper grain visible throughout.",
+      "full_coverage": "DENSE graphite shading covers entire paper to every edge and corner. Drawing extends beyond visible frame as crop from larger sheet. All four corners have graphite tone. No blank margin. No white border.",
+      "negative_prompt": "no color, no blank margins, no white borders, no empty corners, no vignette, no oval fade"
+    },
+    "watercolor": {
+      "id": "watercolor",
+      "label": "Watercolor",
+      "medium": "Watercolor on cold-pressed paper",
+      "technique": "Soft wet edges, transparent washes, paper grain, Turner-inspired luminosity.",
+      "full_coverage": "ENTIRE paper pre-toned with background wash in mood-appropriate colors BEFORE subject. Wash covers every corner and edge — zero white paper as border. Think: artist wet entire sheet and laid toned ground first.",
+      "negative_prompt": "no white paper border, no blank margins, no unpainted edges, no white corners"
+    },
+    "charcoal": {
+      "id": "charcoal",
+      "label": "Charcoal",
+      "medium": "Charcoal on paper",
+      "technique": "Deep blacks, dramatic contrast, smudged tones, expressive marks.",
+      "full_coverage": "Heavy charcoal tones (blacks, grays, smudges) fill entire background to every edge and corner. Extends beyond visible frame. All four corners have charcoal tone. No blank paper.",
+      "negative_prompt": "no color, no blank margins, no white borders, no empty corners, no vignette"
+    },
+    "pastel": {
+      "id": "pastel",
+      "label": "Pastel",
+      "medium": "Soft pastel artwork",
+      "technique": "Velvety chalky texture, rich pigment, Degas-inspired, luminous finish.",
+      "full_coverage": "CRITICAL: Dense pastel pigment covers the ENTIRE image surface — background, subject, every corner and edge. Background filled with rich layered pastel strokes in mood-appropriate colors reaching all four edges. NO blank area, NO exposed paper edge, NO mat, NO border, NO paspatu. Image is 100% covered with pastel artwork edge to edge — as if cropped from larger pastel painting. Every pixel shows pastel color.",
+      "negative_prompt": "no mat, no paspatu, no passepartout, no border, no paper edge, no white area, no blank margin, no frame, no mounting"
+    }
+  },
+
+  "format": {
+    "aspect_ratio": {
+      "rule": "DYNAMIC: portrait/vertical input → 3:4, landscape/horizontal input → 4:3",
+      "vertical": "3:4",
+      "horizontal": "4:3"
+    },
+    "subject_size": "60-70% of image area",
+    "full_bleed": {
+      "rule": "Artwork fills entire frame edge to edge. All four corners at full density. Looks like crop from larger painting.",
+      "paper_styles": "Background tones/washes cover entire surface corner to corner."
+    },
+    "negative_prompt": "No vignette, no faded edges, no radial gradient, no blank margins, no white borders, no empty corners, no oval fade, no medallion composition, no frames, no mat, no paspatu, no passepartout, no mounting, no canvas edges as border, no paper edges as border, no easel, no wall, no visible borders, no rounded corners."
+  },
+
+  "identity": {
+    "humans": "Preserve exact facial features, face shape, eye color, skin tone, hairstyle and hair color — do not alter or idealize.",
+    "animals": "Preserve exact breed, fur color/pattern, markings, ear shape, eye color, body proportions."
+  },
+
+  "critical_rules": [
+    "MUSEUM QUALITY — every output must look like it belongs in a national gallery",
+    "THE SUBJECT IS THE STAR — 60-70% of frame, sharpest detail, brightest light",
+    "ATTIRE is richly detailed, varied creatively each generation — never the same combination twice",
+    "BACKGROUND is a PAINTED SCENE with depth — not flat, not photo-blurred, but painterly with visible brushwork",
+    "DRAMATIC LIGHTING — theatrical chiaroscuro, subject glows against rich shadow",
+    "AUTHENTIC PAINTING TEXTURE — visible brushstrokes, craquelure, canvas grain, varnish patina",
+    "PRESERVE exact likeness from uploaded photo",
+    "Never modernize",
+    "Animals ALERT and DIGNIFIED — not sleeping, not looking away",
+    "Never cross-contaminate subject types",
+    "{MOOD} controls: attire, background scene, lighting mood, palette",
+    "{STYLE} controls: medium, technique, brushwork, texture, finish",
+    "FULL BLEED — artwork covers 100% of surface"
+  ],
+
+  "gemini_api_config": {
+    "model": "gemini-2.5-flash-image",
+    "generationConfig": {
+      "responseModalities": ["TEXT", "IMAGE"],
+      "imageConfig": {
+        "aspectRatio_portrait": "3:4",
+        "aspectRatio_landscape": "4:3",
+        "note": "Choose based on input orientation. Supported: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9"
+      }
+    }
+  }
+}

@@ -1,13 +1,14 @@
 #!/usr/bin/env tsx
 /**
- * Regenerates gallery images (text-only, no source image).
- * Run with: npm run regenerate-gallery
- * Optional: npm run regenerate-gallery -- --only=family-oil-painting-1,family-oil-painting-2,...
- * Or: npm run regenerate-gallery -- --rejected  (regenerates only the rejected images list)
+ * Regenerates gallery images with mood × category × medium × variant.
  *
- * Modes:
- * - Default: calls /api/generate on http://127.0.0.1:5001 (requires dev server)
- * - --standalone: calls Gemini API directly (no dev server needed)
+ * Run:  npm run regenerate-gallery -- --standalone
+ * Filter: npm run regenerate-gallery -- --standalone --mood=royal_noble
+ *         npm run regenerate-gallery -- --standalone --mood=royal_noble --category=pets
+ *         npm run regenerate-gallery -- --standalone --mood=royal_noble --style=oil-painting
+ *         npm run regenerate-gallery -- --standalone --only=royal_noble--pets-oil-painting-1
+ *
+ * Without --standalone: calls /api/generate on the dev server (must be running).
  */
 
 import { writeFile, mkdir } from "fs/promises";
@@ -18,150 +19,154 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 const API_URL = process.env.API_URL || "http://127.0.0.1:5001";
-const DELAY_BETWEEN_REQUESTS_MS = 1500;
+const DELAY_BETWEEN_REQUESTS_MS = 2000;
+const MAX_RETRIES = 2;
 
+const MOODS = ["royal_noble", "neoclassical", "heritage"] as const;
 const CATEGORIES = ["pets", "family", "kids", "couples", "self-portrait"] as const;
 const STYLES = ["oil-painting", "acrylic", "pencil-sketch", "watercolor", "charcoal", "pastel"] as const;
-const IMAGES_PER_CATEGORY = 3;
+const IMAGES_PER_COMBO = 3;
 
-const OUTPUT_DIR = join(ROOT, "client", "src", "assets", "generated_gallery");
+const OUTPUT_DIR = join(ROOT, "client", "src", "assets", "mood");
 
-type ImageSpec = { category: string; style: string; imgIndex: number };
+type MoodId = (typeof MOODS)[number];
+
+const MOOD_LABELS: Record<MoodId, string> = {
+  royal_noble: "Royal",
+  neoclassical: "Neoclassical",
+  heritage: "Heritage",
+};
+
+type ImageSpec = { mood: MoodId; category: string; style: string; imgIndex: number };
+
+// ---------- CLI parsing ----------
+
+function getCliArg(name: string): string | undefined {
+  const arg = process.argv.find((a) => a.startsWith(`--${name}=`));
+  return arg?.slice(`--${name}=`.length);
+}
 
 function parseOnlyArg(arg: string): ImageSpec[] {
   const items = arg.split(",").map((s) => s.trim()).filter(Boolean);
   const result: ImageSpec[] = [];
   for (const item of items) {
-    let found = false;
-    for (const style of STYLES) {
-      for (let imgIndex = 1; imgIndex <= IMAGES_PER_CATEGORY; imgIndex++) {
-        const suffix = `-${style}-${imgIndex}`;
-        if (item.endsWith(suffix)) {
-          const category = item.slice(0, -suffix.length);
-          if (CATEGORIES.includes(category as (typeof CATEGORIES)[number])) {
-            result.push({ category, style, imgIndex });
-            found = true;
-            break;
+    // Format: mood--category-style-index  e.g. royal_noble--pets-oil-painting-1
+    for (const mood of MOODS) {
+      const prefix = `${mood}--`;
+      if (!item.startsWith(prefix)) continue;
+      const rest = item.slice(prefix.length);
+      for (const style of STYLES) {
+        for (let idx = 1; idx <= IMAGES_PER_COMBO; idx++) {
+          const suffix = `-${style}-${idx}`;
+          if (rest.endsWith(suffix)) {
+            const category = rest.slice(0, -suffix.length);
+            if (CATEGORIES.includes(category as (typeof CATEGORIES)[number])) {
+              result.push({ mood, category, style, imgIndex: idx });
+            }
           }
         }
       }
-      if (found) break;
     }
   }
   return result;
 }
 
-// Rejected this round: repetitive, sad, illustration-like, same gender bias
-const REJECTED_IMAGES = [
-  "couples-pencil-sketch-2", "couples-watercolor-1", "couples-watercolor-2",
-  "family-charcoal-3", "family-oil-painting-3", "family-pencil-sketch-2",
-  "self-portrait-acrylic-2", "self-portrait-charcoal-3",
-  "self-portrait-oil-painting-1", "self-portrait-oil-painting-2", "self-portrait-oil-painting-3",
-  "self-portrait-pastel-1",
-];
-
-function getOnlyList(): ImageSpec[] | null {
-  if (process.argv.includes("--rejected")) {
-    return parseOnlyArg(REJECTED_IMAGES.join(","));
+function buildTaskList(): ImageSpec[] {
+  const onlyArg = getCliArg("only");
+  if (onlyArg) {
+    const list = parseOnlyArg(onlyArg);
+    if (list.length > 0) return list;
+    console.warn("Warning: --only did not match any valid specs, running full generation.");
   }
-  const arg = process.argv.find((a) => a.startsWith("--only="));
-  if (!arg) return null;
-  const value = arg.slice("--only=".length);
-  const list = parseOnlyArg(value);
-  return list.length > 0 ? list : null;
+
+  const moodFilter = getCliArg("mood") as MoodId | undefined;
+  const catFilter = getCliArg("category");
+  const styleFilter = getCliArg("style");
+
+  const moods = moodFilter ? [moodFilter] : [...MOODS];
+  const cats = catFilter ? [catFilter] : [...CATEGORIES];
+  const styles = styleFilter ? [styleFilter] : [...STYLES];
+
+  const list: ImageSpec[] = [];
+  for (const mood of moods) {
+    for (const category of cats) {
+      for (const style of styles) {
+        for (let imgIndex = 1; imgIndex <= IMAGES_PER_COMBO; imgIndex++) {
+          list.push({ mood: mood as MoodId, category, style, imgIndex });
+        }
+      }
+    }
+  }
+  return list;
 }
 
 function isStandalone(): boolean {
   return process.argv.includes("--standalone");
 }
 
+// ---------- generation ----------
+
 async function checkApiReachable(): Promise<void> {
   try {
     const res = await fetch(API_URL, { signal: AbortSignal.timeout(5000) });
-    if (res.status < 500) return; // Server is up
+    if (res.status < 500) return;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    const cause = err instanceof Error && err.cause instanceof Error ? err.cause.message : "";
     throw new Error(
-      `Cannot reach API at ${API_URL}. ${msg}${cause ? ` (${cause})` : ""}. ` +
-      `Ensure the dev server is running: npm run dev`
+      `Cannot reach API at ${API_URL}. ${msg}. Ensure the dev server is running: npm run dev`
     );
   }
 }
 
-async function generateImageViaApi(
-  style: string,
-  category: string,
-  imgIndex: number
-): Promise<string> {
+async function generateImageStandalone(spec: ImageSpec): Promise<string> {
+  const { generateGalleryImage } = await import("../server/generate-gallery");
+  return generateGalleryImage(spec.style, spec.category, spec.imgIndex, spec.mood);
+}
+
+async function generateImageViaApi(spec: ImageSpec): Promise<string> {
   const res = await fetch(`${API_URL}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ style, category, imgIndex }),
+    body: JSON.stringify({ style: spec.style, category: spec.category, imgIndex: spec.imgIndex, mood: spec.mood }),
   });
-
-  const contentType = res.headers.get("content-type") || "";
   const text = await res.text();
-
-  if (!contentType.includes("application/json")) {
-    if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
-      throw new Error(
-        `Server returned HTML instead of JSON. Restart the dev server (npm run dev) to pick up the /api/generate route, then try again.`
-      );
-    }
+  if (!res.headers.get("content-type")?.includes("application/json")) {
     throw new Error(`Unexpected response (${res.status}): ${text.slice(0, 200)}`);
   }
-
   const data = JSON.parse(text);
-  if (!res.ok) {
-    throw new Error(`Generate failed: ${JSON.stringify(data)}`);
-  }
-  if (!data.imageUrl) {
-    throw new Error("No imageUrl in response");
-  }
+  if (!res.ok) throw new Error(`Generate failed: ${JSON.stringify(data)}`);
+  if (!data.imageUrl) throw new Error("No imageUrl in response");
   return data.imageUrl;
 }
 
-async function generateImage(
-  style: string,
-  category: string,
-  imgIndex: number,
-  standalone: boolean
-): Promise<string> {
-  if (standalone) {
-    const { generateGalleryImage } = await import("../server/generate-gallery");
-    return generateGalleryImage(style, category, imgIndex);
-  }
-  return generateImageViaApi(style, category, imgIndex);
+async function generateImage(spec: ImageSpec, standalone: boolean): Promise<string> {
+  return standalone ? generateImageStandalone(spec) : generateImageViaApi(spec);
 }
 
 function extractBase64FromDataUrl(dataUrl: string): Buffer {
   const match = dataUrl.match(/^data:image\/\w+;base64,(.+)$/);
-  if (!match) {
-    throw new Error("Invalid data URL format");
-  }
+  if (!match) throw new Error("Invalid data URL format");
   return Buffer.from(match[1], "base64");
 }
 
-async function main() {
-  const onlyList = getOnlyList();
-  const tasks: ImageSpec[] = onlyList ?? (() => {
-    const list: ImageSpec[] = [];
-    for (const category of CATEGORIES) {
-      for (const style of STYLES) {
-        for (let imgIndex = 1; imgIndex <= IMAGES_PER_CATEGORY; imgIndex++) {
-          list.push({ category, style, imgIndex });
-        }
-      }
-    }
-    return list;
-  })();
+function specToFilename(spec: ImageSpec): string {
+  return `${spec.mood}--${spec.category}-${spec.style}-${spec.imgIndex}.png`;
+}
 
+// ---------- main ----------
+
+async function main() {
+  const tasks = buildTaskList();
   const standalone = isStandalone();
-  console.log("Gallery regeneration script (text-only generation, no source images)");
-  console.log("Mode:", standalone ? "standalone (Gemini API direct)" : `API (${API_URL})`);
-  console.log("Output:", OUTPUT_DIR);
-  console.log("Total images:", tasks.length, onlyList ? "(selected only)" : "");
+
+  const moodCount = new Set(tasks.map((t) => t.mood)).size;
+  const catCount = new Set(tasks.map((t) => t.category)).size;
+  const styleCount = new Set(tasks.map((t) => t.style)).size;
+
+  console.log("=== Mood × Category × Medium Gallery Generator ===");
+  console.log(`Mode: ${standalone ? "standalone (Gemini API direct)" : `API (${API_URL})`}`);
+  console.log(`Output: ${OUTPUT_DIR}`);
+  console.log(`Tasks: ${tasks.length} images (${moodCount} moods × ${catCount} categories × ${styleCount} mediums × ${IMAGES_PER_COMBO} variants)`);
   console.log("");
 
   if (!standalone) {
@@ -169,82 +174,49 @@ async function main() {
   }
   await mkdir(OUTPUT_DIR, { recursive: true });
 
-  let completed = 0;
-  let failed = 0;
-  const total = tasks.length;
+  let ok = 0;
+  let fail = 0;
 
-  for (const { category, style, imgIndex } of tasks) {
-    const outputFilename = `${category}-${style}-${imgIndex}.png`;
-    const outputPath = join(OUTPUT_DIR, outputFilename);
+  for (let i = 0; i < tasks.length; i++) {
+    const spec = tasks[i];
+    const filename = specToFilename(spec);
+    const outputPath = join(OUTPUT_DIR, filename);
 
-    try {
-      console.log(`[${completed + 1}/${total}] ${outputFilename}...`);
-      const imageUrl = await generateImage(style, category, imgIndex, standalone);
-      const buffer = extractBase64FromDataUrl(imageUrl);
-      await writeFile(outputPath, buffer);
-      console.log(`  OK`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      const hint = msg.includes("fetch failed") || msg.includes("ECONNREFUSED")
-        ? " (Is the dev server running? Try: npm run dev)"
-        : "";
-      console.error(`  FAILED:`, msg + hint);
-      failed++;
-      process.exitCode = 1;
+    const label = `${MOOD_LABELS[spec.mood]} / ${spec.category} / ${spec.style} #${spec.imgIndex}`;
+    console.log(`[${i + 1}/${tasks.length}] ${label}`);
+
+    let success = false;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const imageUrl = await generateImage(spec, standalone);
+        const buffer = extractBase64FromDataUrl(imageUrl);
+        await writeFile(outputPath, buffer);
+        console.log(`  ✅ ${filename}`);
+        ok++;
+        success = true;
+        break;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt < MAX_RETRIES) {
+          console.log(`  ⚠️  Retry ${attempt}/${MAX_RETRIES}: ${msg}`);
+          await new Promise((r) => setTimeout(r, DELAY_BETWEEN_REQUESTS_MS));
+        } else {
+          console.error(`  ❌ FAILED: ${msg}`);
+          fail++;
+        }
+      }
     }
 
-    completed++;
-    if (completed < total) {
+    if (i < tasks.length - 1) {
       await new Promise((r) => setTimeout(r, DELAY_BETWEEN_REQUESTS_MS));
     }
   }
 
   console.log("");
-  console.log(`Done. ${completed - failed} images written, ${failed} failed.`);
+  console.log(`Done. ${ok} succeeded, ${fail} failed.`);
+  console.log(`Images saved to: ${OUTPUT_DIR}`);
 
-  if (failed > 0) {
-    console.log("Skipping gallery-images.ts generation due to failures.");
-    return;
-  }
-
-  // Generate gallery-images.ts
-  const galleryImagesPath = join(ROOT, "client", "src", "lib", "gallery-images.ts");
-  const lines: string[] = [
-    'import type { Category } from "@/lib/category-context";',
-    'import type { ArtStyle } from "@shared/schema";',
-    "",
-    "// Auto-generated by scripts/regenerate-gallery.ts",
-    "",
-  ];
-
-  const importVars: Record<string, string> = {};
-  for (const cat of CATEGORIES) {
-    for (const style of STYLES) {
-      for (let n = 1; n <= IMAGES_PER_CATEGORY; n++) {
-        const varName = `${cat.replace(/-/g, "_")}_${style.replace(/-/g, "_")}_${n}`;
-        const filename = `${cat}-${style}-${n}.png`;
-        importVars[`${cat}-${style}-${n}`] = varName;
-        lines.push(`import ${varName} from "@/assets/generated_gallery/${filename}";`);
-      }
-    }
-  }
-
-  lines.push("");
-  lines.push("export const galleryImages: Record<Category, Record<ArtStyle, [string, string, string]>> = {");
-
-  for (const cat of CATEGORIES) {
-    lines.push(`  "${cat}": {`);
-    for (const style of STYLES) {
-      const imgs = [1, 2, 3].map((n) => importVars[`${cat}-${style}-${n}`]).join(", ");
-      lines.push(`    "${style}": [${imgs}],`);
-    }
-    lines.push("  },");
-  }
-
-  lines.push("};");
-
-  await writeFile(galleryImagesPath, lines.join("\n"));
-  console.log(`Generated ${galleryImagesPath}`);
+  if (fail > 0) process.exitCode = 1;
 }
 
 main();
