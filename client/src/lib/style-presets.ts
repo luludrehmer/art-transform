@@ -1,4 +1,4 @@
-import { buildMoodPrompt, getIdentityAnchor } from "@shared/build-prompt-from-template";
+import { buildMoodPrompt } from "@shared/build-prompt-from-template";
 
 /**
  * Top-level art style presets. Combined with the selected medium (Oil, Acrylic, etc.)
@@ -25,9 +25,9 @@ export const STYLE_PRESET_DESCRIPTIONS: Record<StylePresetId, string> = {
 
 const CATEGORY_SUBJECT: Record<string, string> = {
   pets: "the subject",
-  family: "the subject",
-  kids: "the subject",
-  couples: "the subjects",
+  family: "ALL subjects (every person visible in the photo)",
+  kids: "ALL subjects (every child visible in the photo)",
+  couples: "BOTH subjects (the couple in the photo)",
   "self-portrait": "the subject",
 };
 
@@ -46,8 +46,7 @@ export function resolveStylePresetPrompt(
   const template = buildMoodPrompt(moodId);
   if (!template) return null;
   const subject = CATEGORY_SUBJECT[category] ?? "the subject";
+  // Identity anchor is already added by buildPrompt (server) — do NOT duplicate here
   const filled = template.replace(/\[MEDIUM\]/g, mediumName).replace(/\[SUBJECT\]/g, subject);
-  const identity = getIdentityAnchor(category);
-  const combined = `${filled} ${identity}`.replace(/\s+/g, " ").trim();
-  return combined;
+  return filled.replace(/\s+/g, " ").trim();
 }

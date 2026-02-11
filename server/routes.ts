@@ -58,6 +58,13 @@ function normalizePromptText(s: string): string {
  * Builds the full prompt for Gemini from prompt-template.json (v5.1).
  * When a mood preset is set, its vision is placed first; technique (style) is then applied.
  */
+const MULTI_PERSON_CATEGORIES = ["family", "kids", "couples"];
+
+function getMultiSubjectRule(category?: string): string {
+  if (!category || !MULTI_PERSON_CATEGORIES.includes(category)) return "";
+  return `\n\nMULTI-SUBJECT RULE: This photo contains MULTIPLE people. You MUST include EVERY person visible in the input photo. Count them. Paint ALL of them — same number, same arrangement, same relationships. NEVER drop, merge, crop out, or omit any person. NEVER add people who are not in the photo.`;
+}
+
 function buildPrompt(style: string, category?: string, stylePresetPrompt?: string | null): string {
   const technique = styleTechniqueNames[style] || "oil painting";
   const categoryLabel = category && categoryLabels[category] ? categoryLabels[category] : "photo";
@@ -65,12 +72,13 @@ function buildPrompt(style: string, category?: string, stylePresetPrompt?: strin
   const formatBlock = getFormatBlock();
   const identityAnchor = getIdentityAnchor(category);
   const identityGuard = getIdentityGuard(category);
+  const multiRule = getMultiSubjectRule(category);
   const trimmedPreset = stylePresetPrompt?.trim();
   if (trimmedPreset) {
     const vision = normalizePromptText(trimmedPreset);
-    return `${identityGuard}\n\nTransform this ${categoryLabel} photo into an artwork that fulfills this exact vision: ${vision}. The result must be a realistic handmade ${technique} using authentic ${technique} techniques.${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
+    return `${identityGuard}${multiRule}\n\nTransform this ${categoryLabel} photo into an artwork that fulfills this exact vision: ${vision}. The result must be a realistic handmade ${technique} using authentic ${technique} techniques.${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
   }
-  return `${identityGuard}\n\nTransform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques. ${identityAnchor}${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
+  return `${identityGuard}${multiRule}\n\nTransform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques. ${identityAnchor}${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
 }
 
 const transformWithGemini = async (

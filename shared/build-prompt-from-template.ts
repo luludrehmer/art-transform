@@ -38,13 +38,18 @@ const t = raw as unknown as {
   >;
 };
 
+const MULTI_PERSON_CATEGORIES = ["family", "kids", "couples"];
+
 /** Identity anchor — format.identity from JSON. */
 export function getIdentityAnchor(category?: string): string {
   const isPet = category === "pets";
+  const isMulti = category ? MULTI_PERSON_CATEGORIES.includes(category) : false;
   if (isPet) {
     return `CRITICAL IDENTITY RULE: Preserve the subject's exact breed, fur color/pattern, markings, ear shape, eye color, body proportions, and facial expression from the original photo. Do NOT alter, idealize, or stylize any physical feature.`;
   }
-  return `CRITICAL IDENTITY RULE: Preserve the subject's EXACT facial features, face shape, bone structure, eye color, eye shape, nose shape, lip shape, skin tone, skin texture, facial hair (beard, mustache, stubble — keep or remove NOTHING), hairstyle, hair color, hair length, and facial expression from the original photo. The face in the output must be recognizable as the SAME person. Do NOT alter, idealize, beautify, age, de-age, or stylize ANY facial or hair feature. The expression must match the original photo exactly — do not make the subject smile, look serious, or change their gaze direction.`;
+  const subjectRef = isMulti ? "EVERY person" : "the subject";
+  const faceRef = isMulti ? "Each face" : "The face";
+  return `CRITICAL IDENTITY RULE: Preserve ${subjectRef}'s EXACT facial features, face shape, bone structure, eye color, eye shape, nose shape, lip shape, skin tone, skin texture, facial hair (beard, mustache, stubble — keep or remove NOTHING), hairstyle, hair color, hair length, and facial expression from the original photo. ${faceRef} in the output must be recognizable as the SAME person. Do NOT alter, idealize, beautify, age, de-age, or stylize ANY facial or hair feature. Expressions must match the original photo exactly.${isMulti ? " Include ALL people from the photo — do NOT drop, merge, or omit anyone." : ""}`;
 }
 
 /**
@@ -53,8 +58,12 @@ export function getIdentityAnchor(category?: string): string {
  */
 export function getIdentityGuard(category?: string): string {
   const isPet = category === "pets";
+  const isMulti = category ? MULTI_PERSON_CATEGORIES.includes(category) : false;
   if (isPet) {
     return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT'S APPEARANCE: The animal's face, body, breed, fur, markings, ear shape, eye color, and expression must be pixel-level faithful to the input photo. Change ONLY the art medium, background, lighting, and any requested attire/accessories. The subject's physical appearance is LOCKED.`;
+  }
+  if (isMulti) {
+    return `ABSOLUTE RULE — INCLUDE EVERY PERSON FROM THE PHOTO AND DO NOT MODIFY ANYONE'S FACE, HAIR, OR EXPRESSION: Count the people in the input photo and include ALL of them in the output — same number, same positions, same relationships. Each person's facial features, face shape, skin tone, facial hair, hairstyle, hair color, and facial expression must be pixel-level faithful to the input. Change ONLY the art medium, clothing/attire, background, and lighting. Every face and hairstyle is LOCKED.`;
   }
   return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT'S FACE, HAIR, OR EXPRESSION: The person's facial features, face shape, skin tone, facial hair, hairstyle, hair color, and facial expression must be pixel-level faithful to the input photo. Change ONLY the art medium, clothing/attire, background, and lighting. The subject's face and hair are LOCKED — treat them as a sacred reference that cannot be altered, idealized, or stylized in any way.`;
 }
@@ -84,20 +93,30 @@ export function getStyleBlock(styleId: string): string {
   return ` ${s.medium}. ${s.technique}. ${coverage}.${neg}`;
 }
 
-function flattenAttire(obj: Record<string, unknown> | null | undefined): string[] {
-  if (!obj || typeof obj !== "object") return [];
-  const out: string[] = [];
-  for (const v of Object.values(obj)) {
-    if (Array.isArray(v)) out.push(v.map(String).join(", "));
-    else if (typeof v === "string" && v.trim()) out.push(v.trim());
+/** Pick up to N random string items from attire object for variety without bloating prompt. */
+function pickAttireHighlights(obj: Record<string, unknown> | null | undefined, max = 3): string {
+  if (!obj || typeof obj !== "object") return "";
+  const items: string[] = [];
+  for (const [key, v] of Object.entries(obj)) {
+    // Skip meta keys
+    if (key === "instruction" || key === "principle") continue;
+    if (Array.isArray(v)) {
+      // Pick 1-2 from each array
+      const shuffled = [...v].sort(() => Math.random() - 0.5);
+      items.push(...shuffled.slice(0, 2).map(String));
+    } else if (typeof v === "string" && v.trim()) {
+      items.push(v.trim());
+    }
   }
-  return out;
+  // Shuffle and cap
+  const shuffled = items.sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, max).join("; ");
 }
 
 /**
  * Builds the mood preset prompt from JSON. Returns string with [MEDIUM] and [SUBJECT] placeholders;
  * caller (e.g. style-presets resolveStylePresetPrompt) replaces them.
- * Output is clear, punctuated, and safe for the model (no raw objects or run-on text).
+ * COMPACT version — keeps prompt under ~250 words to prevent identity dilution.
  */
 export function buildMoodPrompt(moodId: MoodId): string {
   const m = t.moods[moodId];
@@ -105,51 +124,32 @@ export function buildMoodPrompt(moodId: MoodId): string {
 
   const parts: string[] = [];
 
-  parts.push("[MEDIUM] portrait of [SUBJECT]. Authentic masterwork painting — not AI-generated, not photo filter; depth and craftsmanship of Old Masters.");
+  parts.push("[MEDIUM] portrait of [SUBJECT]. Authentic masterwork painting — depth and craftsmanship of Old Masters.");
   parts.push(m.concept);
   parts.push("SUBJECT 60-70% of frame.");
 
-  const animalBits = flattenAttire(m.attire_animals as Record<string, unknown>);
-  if (animalBits.length) {
-    parts.push(`If [SUBJECT] is an animal: ATTIRE — ANIMALS ONLY — ${animalBits.join(". ")}.`);
+  // Compact attire — pick highlights, not exhaustive lists
+  const animalHighlights = pickAttireHighlights(m.attire_animals as Record<string, unknown>, 3);
+  if (animalHighlights) {
+    parts.push(`If animal: ${animalHighlights}.`);
   }
 
-  const humanBits = flattenAttire(m.attire_humans as Record<string, unknown>);
-  if (humanBits.length) {
-    parts.push(`If human: vary creatively — ${humanBits.join("; ")}.`);
+  const humanHighlights = pickAttireHighlights(m.attire_humans as Record<string, unknown>, 4);
+  if (humanHighlights) {
+    parts.push(`If human: ${humanHighlights}.`);
   }
 
+  // Compact background — type + technique only
   const bg = m.background as {
     type?: string;
     description?: string;
-    elements?: string[];
     technique?: string;
-    priority?: string;
-    interior?: { label?: string; elements?: string[] };
-    exterior?: { label?: string; elements?: string[] };
-    brightness?: string;
     style_reference?: string;
-    narrative?: string;
-    atmosphere?: string;
   } | null;
   if (bg?.type) {
-    let bgLine = `BACKGROUND — ${bg.type}`;
-    if (bg.description) bgLine += `: ${bg.description}`;
-    if (Array.isArray(bg.elements) && bg.elements.length) bgLine += ` ${bg.elements.join("; ")}`;
-    if (bg.priority) bgLine += `. ${bg.priority}`;
-    if (bg.interior) {
-      const el = bg.interior.elements;
-      if (Array.isArray(el) && el.length) bgLine += ` Interior: ${el.join("; ")}`;
-    }
-    if (bg.exterior) {
-      const el = bg.exterior.elements;
-      if (Array.isArray(el) && el.length) bgLine += ` Exterior: ${el.join("; ")}`;
-    }
+    let bgLine = `BACKGROUND: ${bg.type}`;
+    if (bg.description) bgLine += ` — ${bg.description}`;
     if (bg.technique) bgLine += ` ${bg.technique}`;
-    if (bg.style_reference) bgLine += ` (${bg.style_reference})`;
-    if (bg.narrative) bgLine += ` ${bg.narrative}`;
-    if (bg.atmosphere) bgLine += ` ${bg.atmosphere}`;
-    if (bg.brightness) bgLine += ` ${bg.brightness}`;
     parts.push(bgLine.trim() + ".");
   }
 

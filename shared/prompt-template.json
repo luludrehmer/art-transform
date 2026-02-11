@@ -98,14 +98,14 @@
     "royal_noble": {
       "id": "royal_noble",
       "label": "Royal",
-      "concept": "DRESS and COMPOSE the subject as royalty — regal attire, royal setting, sovereign atmosphere. Do NOT change the subject's face, hair, facial hair, or expression.",
+      "concept": "DRESS the subject in royal attire and place them in a regal setting with sovereign atmosphere. Do NOT change the subject's face, hair, facial hair, or expression.",
       "attire_humans": {
         "instruction": "Luxurious royal garments — vary the combination creatively each time.",
         "garments": ["Heavy robes, capes, mantles in jewel tones — burgundy, plum, navy, emerald, royal purple, crimson, midnight blue"],
         "fur_trim": ["Ermine with black spots", "sable", "mink", "white fox — prominent and luxurious"],
         "embroidery": ["Gold/silver thread", "heraldic motifs", "floral patterns", "royal crests", "lions", "eagles", "fleur-de-lis", "thistles"],
         "lace": ["Belgian", "Venetian", "French — on collar, cuffs, décolletage"],
-        "headpiece": "ALWAYS PRESENT: crown, tiara, diadem, coronet, jeweled circlet",
+        "headpiece": "Place ON TOP of existing hairstyle without altering it: crown, tiara, diadem, coronet, or jeweled circlet",
         "jewelry": "Layer multiple pieces: necklaces, pendants, brooches, rings, chains of office, medallions, chokers. Mix gold, pearls, rubies, sapphires, emeralds.",
         "hand_props": ["scepter", "orb", "royal flower", "jeweled fan", "sealed letter", "velvet glove", "portrait miniature"],
         "fabrics": ["velvet", "silk brocade", "damask", "satin", "taffeta"],
@@ -138,12 +138,12 @@
     "neoclassical": {
       "id": "neoclassical",
       "label": "Neoclassical",
-      "concept": "DRESS and COMPOSE the subject in Greco-Roman classical style — toga, laurel, marble setting, timeless beauty. Do NOT change the subject's face, hair, facial hair, or expression.",
+      "concept": "DRESS the subject in Greco-Roman classical attire (toga, draped fabric) and place them in a marble/classical setting. Do NOT change the subject's face, hair, facial hair, or expression.",
       "attire_humans": {
         "instruction": "Classical garments — vary creatively.",
         "garments": ["Toga", "chiton", "himation", "peplos", "stola — white, cream, ivory with colored accents"],
         "accents": ["Terracotta", "olive", "gold", "dusty rose", "Tyrian purple", "sage sash/stole"],
-        "crown": "ALWAYS PRESENT: laurel wreath, olive crown, gold diadem, vine crown, myrtle wreath, golden stephane",
+        "crown": "Place ON TOP of existing hairstyle without altering it: laurel wreath, olive crown, gold diadem, vine crown, myrtle wreath, or golden stephane",
         "clasps": ["Gold fibula", "ornate brooch", "lion-head pin", "cameo", "serpent pin"],
         "jewelry": ["Gold cuff", "arm band", "signet ring", "chain with pendant (owl, lyre, sun, dolphin, eagle)", "anklet"],
         "hair": "DO NOT change the subject's hairstyle — keep it exactly as in the photo. May add small classical accessories (gold pins, vine, thin headband) ON TOP of the existing hairstyle without altering it.",
@@ -176,7 +176,7 @@
     "heritage": {
       "id": "heritage",
       "label": "Heritage",
-      "concept": "DRESS and COMPOSE the subject as old-money aristocracy — understated generational wealth, tailored period clothing, ancestral estate setting. Do NOT change the subject's face, hair, facial hair, or expression.",
+      "concept": "DRESS the subject in tailored old-money aristocratic clothing and place them in an ancestral estate setting with understated generational wealth. Do NOT change the subject's face, hair, facial hair, or expression.",
       "attire_humans": {
         "instruction": "Impeccably tailored period clothing — vary creatively.",
         "men": ["Frock coat", "morning coat", "hunting jacket", "Norfolk jacket", "riding coat", "double-breasted blazer", "waistcoat in subtle pattern", "silk cravat/ascot/bow tie with pin", "crisp high-collar shirt"],
@@ -189,7 +189,7 @@
       },
       "attire_animals": {
         "principle": "Heritage animals are NOT bare — VISIBLE, high-quality accessories communicating old-money refinement.",
-        "collar": "ALWAYS PRESENT: fine leather (oxblood, British tan, dark brown) with brass buckle and crest tag; OR tartan (Stewart, Blackwatch) with gold charm; OR pearl-studded with pendant",
+        "collar": "Optional: fine leather (oxblood, British tan, dark brown) with brass buckle and crest tag; OR tartan (Stewart, Blackwatch) with gold charm; OR pearl-studded with pendant",
         "additional": ["Tweed vest/coat (herringbone, houndstooth)", "cashmere blanket over haunches", "silk neckerchief/bow in muted tones"],
         "props_nearby": ["Leather-bound book", "riding crop", "top hat", "pocket watch on chain", "worn leather gloves"],
         "grooming": "Impeccably groomed to a sheen — coat brushed, ears clean, nails trimmed",
