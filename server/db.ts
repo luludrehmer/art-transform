@@ -12,5 +12,23 @@ if (!connectionString) {
   );
 }
 
-const pool = new Pool({ connectionString });
+const pool = new Pool({
+  connectionString,
+  // Keep connections alive during long Gemini processing (up to 3 min)
+  idleTimeoutMillis: 300_000, // 5 min idle before closing
+  connectionTimeoutMillis: 10_000,
+  max: 10,
+});
+
+// Keep-alive: ping the pool every 60s to prevent WebSocket idle disconnects
+setInterval(async () => {
+  try {
+    const client = await pool.connect();
+    await client.query("SELECT 1");
+    client.release();
+  } catch {
+    // Silently ignore — pool will reconnect on next real query
+  }
+}, 60_000);
+
 export const db = drizzle({ client: pool, schema });

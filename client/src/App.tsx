@@ -8,7 +8,6 @@ import { TransformationProvider } from "@/lib/transformation-context";
 import { CategoryProvider } from "@/lib/category-context";
 import { Header } from "@/components/header";
 import { AnnouncementBar } from "@/components/announcement-bar";
-import { Footer } from "@/components/footer";
 import { NavigationDrawer } from "@/components/navigation-drawer";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
@@ -68,13 +67,21 @@ function App() {
       <TooltipProvider>
         <CategoryProvider>
           <TransformationProvider>
-            <div className="min-h-screen flex flex-col">
+            <div
+              className="min-h-screen flex flex-col"
+              style={{
+                backgroundImage: "url('/bg-clouds.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center top",
+                backgroundRepeat: "no-repeat",
+                backgroundAttachment: "fixed",
+              }}
+            >
               <AnnouncementBar />
               <Header onMenuClick={() => setDrawerOpen(true)} />
               <main className="flex-1 w-full max-w-5xl mx-auto px-4">
                 <Router />
               </main>
-              <Footer />
             </div>
             <NavigationDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
             <Toaster />

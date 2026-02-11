@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Upload, Sparkles, Download, RefreshCw, Check, ExternalLink, Share2, Bookmark, Palette, Loader2 } from "lucide-react";
+import { Upload, Sparkles, Download, RefreshCw, Check, ExternalLink, Share2, Bookmark, Palette, Loader2, Plus, X } from "lucide-react";
 import { FreeShippingBadge } from "@/components/free-shipping-badge";
 import { CheckoutRedirectOverlay } from "@/components/checkout-redirect-overlay";
 import { ProtectedImage } from "@/components/protected-image";
@@ -68,7 +68,7 @@ const categoryContent: Record<Category, {
     headline: "Your Pet, Transformed Into Art",
     headlineLine1: "Your Pet,",
     headlineLine2: "Transformed Into Art",
-    subheadline: "Preview Free · From $29 to purchase",
+    subheadline: "No credit card required · Preview free",
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Pet's Photo",
     photoTip: "Clear, bright photos work best",
@@ -80,7 +80,7 @@ const categoryContent: Record<Category, {
     headline: "Family Portraits That Last Generations",
     headlineLine1: "Family Portraits",
     headlineLine2: "That Last Generations",
-    subheadline: "Preview Free · From $29 to purchase",
+    subheadline: "No credit card required · Preview free",
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Family Photo",
     photoTip: "Clear, bright photos work best",
@@ -92,7 +92,7 @@ const categoryContent: Record<Category, {
     headline: "Childhood Moments Transformed Into Art",
     headlineLine1: "Childhood Moments",
     headlineLine2: "Transformed Into Art",
-    subheadline: "Preview Free · From $29 to purchase",
+    subheadline: "No credit card required · Preview free",
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Child's Photo",
     photoTip: "Clear, bright photos work best",
@@ -104,7 +104,7 @@ const categoryContent: Record<Category, {
     headline: "Your Love Story, Beautifully Painted",
     headlineLine1: "Your Love Story,",
     headlineLine2: "Beautifully Painted",
-    subheadline: "Preview Free · From $29 to purchase",
+    subheadline: "No credit card required · Preview free",
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Couple Photo",
     photoTip: "Clear, bright photos work best",
@@ -116,7 +116,7 @@ const categoryContent: Record<Category, {
     headline: "You, Reimagined As Art",
     headlineLine1: "You,",
     headlineLine2: "Reimagined As Art",
-    subheadline: "Preview Free · From $29 to purchase",
+    subheadline: "No credit card required · Preview free",
     step1Text: "Choose Your Art Style",
     uploadText: "Share Your Photo",
     photoTip: "Clear, bright photos work best",
@@ -219,6 +219,8 @@ export default function Home() {
   const [watermarkedDisplayUrl, setWatermarkedDisplayUrl] = useState<string | null>(null);
   const [purchasingTier, setPurchasingTier] = useState<string | null>(null);
   const [showCheckoutOverlay, setShowCheckoutOverlay] = useState(false);
+  const [uploadedPhotos, setUploadedPhotos] = useState<Array<{ file: File; previewUrl: string }>>([]);
+  const MAX_PHOTOS = 14;
 
   const TRANSFORM_TIPS = [
     "Analyzing your photo for best composition...",
@@ -264,29 +266,74 @@ export default function Home() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const addPhotos = (newFiles: File[]) => {
+    const imageFiles = newFiles.filter(f => f.type.startsWith("image/"));
+    if (imageFiles.length === 0) return;
+    setUploadedPhotos(prev => {
+      const remaining = MAX_PHOTOS - prev.length;
+      if (remaining <= 0) return prev;
+      const toAdd = imageFiles.slice(0, remaining).map(file => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+      }));
+      return [...prev, ...toAdd];
+    });
+  };
+
+  const removePhoto = (index: number) => {
+    setUploadedPhotos(prev => {
+      const photo = prev[index];
+      if (photo) URL.revokeObjectURL(photo.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-      handleTransform(file, url);
-    }
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    addPhotos(Array.from(files));
+    // Reset the input so re-selecting the same file works
+    e.target.value = "";
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
-      setSelectedFile(file);
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-      handleTransform(file, url);
+    addPhotos(Array.from(e.dataTransfer.files));
+  };
+
+  /** Convert a File to an optimized data URL. Uses smaller size when multi-photo. */
+  const fileToDataUrl = async (file: File, isMultiPhoto = false): Promise<{ dataUrl: string; width: number; height: number }> => {
+    try {
+      return await optimizeImageForUpload(file, isMultiPhoto);
+    } catch {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const img = new Image();
+        const objUrl = URL.createObjectURL(file);
+        img.onload = () => { URL.revokeObjectURL(objUrl); resolve({ width: img.width, height: img.height }); };
+        img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error("Failed to load image")); };
+        img.src = objUrl;
+      });
+      return { dataUrl, width: dims.width, height: dims.height };
     }
   };
 
-  const handleTransform = async (file: File, url: string) => {
-    if (!file || !selectedStyle) return;
+  const handleCreatePortrait = () => {
+    if (uploadedPhotos.length === 0) return;
+    // Use first photo as primary reference for preview
+    const first = uploadedPhotos[0];
+    setSelectedFile(first.file);
+    setPreviewUrl(first.previewUrl);
+    handleTransform(uploadedPhotos.map(p => p.file));
+  };
+
+  const handleTransform = async (files: File[]) => {
+    if (!files.length || !selectedStyle) return;
 
     setIsTransforming(true);
     setProgress(0);
@@ -296,76 +343,62 @@ export default function Home() {
     try {
       const selectedStyleInfo = styleData[selectedStyle];
 
+      // Slower progress for multi-photo (takes 2-3x longer)
+      const progressSpeed = files.length > 1 ? 0.5 : 1.5;
+      const progressSpeedSlow = files.length > 1 ? 0.1 : 0.35;
       progressInterval = setInterval(() => {
         setProgress((prev) => {
-          if (prev < 90) return Math.min(prev + 1.5, 90);
-          if (prev < 98) return Math.min(prev + 0.35, 98);
+          if (prev < 90) return Math.min(prev + progressSpeed, 90);
+          if (prev < 98) return Math.min(prev + progressSpeedSlow, 98);
           return prev;
         });
       }, 500);
 
-      let imageDataUrl: string;
-      let width: number;
-      let height: number;
-      try {
-        const optimized = await optimizeImageForUpload(file);
-        imageDataUrl = optimized.dataUrl;
-        width = optimized.width;
-        height = optimized.height;
-      } catch {
-        const reader = new FileReader();
-        imageDataUrl = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const dims = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-          const img = new Image();
-          const objUrl = URL.createObjectURL(file);
-          img.onload = () => {
-            URL.revokeObjectURL(objUrl);
-            resolve({ width: img.width, height: img.height });
-          };
-          img.onerror = () => {
-            URL.revokeObjectURL(objUrl);
-            reject(new Error("Failed to load image"));
-          };
-          img.src = objUrl;
-        });
-        width = dims.width;
-        height = dims.height;
-      }
+      // Optimize all photos in parallel (smaller images when multi-photo)
+      const isMulti = files.length > 1;
+      const optimizedAll = await Promise.all(files.map(f => fileToDataUrl(f, isMulti)));
+      const primaryImage = optimizedAll[0];
+      const additionalImages = optimizedAll.slice(1);
 
       const mediumName = styleData[selectedStyle]?.name ?? "oil painting";
       const stylePresetPrompt = resolveStylePresetPrompt(selectedStylePreset, mediumName, activeCategory);
-      if (process.env.NODE_ENV === "development" && stylePresetPrompt) {
-        console.log("[transform] preset:", selectedStylePreset, "medium:", mediumName, "prompt preview:", stylePresetPrompt.slice(0, 120) + "…");
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[transform] ${optimizedAll.length} photo(s), preset:`, selectedStylePreset, "medium:", mediumName);
       }
 
       const response = await fetch("/api/transform", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          originalImageUrl: imageDataUrl,
+          originalImageUrl: primaryImage.dataUrl,
+          ...(additionalImages.length > 0 && {
+            additionalImageUrls: additionalImages.map(img => img.dataUrl),
+          }),
           style: selectedStyle,
           status: "processing",
           category: activeCategory,
-          width,
-          height,
+          width: primaryImage.width,
+          height: primaryImage.height,
           ...(stylePresetPrompt && { stylePresetPrompt }),
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(errorData.error || "Transformation failed");
+        const errorData = await response.json().catch(() => null);
+        const errStr = typeof errorData?.error === "string" ? errorData.error
+          : typeof errorData?.message === "string" ? errorData.message
+          : `Server error (${response.status})`;
+        throw new Error(errStr);
       }
 
       const result = await response.json();
       const transformationId = result.transformationId;
 
-      const pollIntervalMs = 400;
-      const maxAttempts = selectedStylePreset && selectedStylePreset !== "none" ? 120 : 60;
+      const pollIntervalMs = 500;
+      // Multi-photo needs much more time (up to 3 min). Mood presets also take longer.
+      const isMultiPhoto = files.length > 1;
+      const baseAttempts = selectedStylePreset && selectedStylePreset !== "none" ? 180 : 120;
+      const maxAttempts = isMultiPhoto ? Math.max(baseAttempts, 360) : baseAttempts; // 360 * 500ms = 3 min
 
       const pollTransformation = (): Promise<void> => {
         return new Promise((resolve, reject) => {
@@ -423,11 +456,17 @@ export default function Home() {
       setIsTransforming(false);
       setProgress(0);
       setTransformationId(null);
+      // Keep uploadedPhotos intact so user can retry without re-uploading
+      // Only clear single-file refs
       setSelectedFile(null);
       setPreviewUrl(null);
+      const rawMsg = error instanceof Error ? error.message : String(error ?? "");
+      const errMsg = typeof rawMsg === "string" && rawMsg.length > 0 ? rawMsg : "An error occurred. Please try again.";
       toast({
         title: "Transformation failed",
-        description: error instanceof Error ? error.message : "An error occurred. Please try again.",
+        description: uploadedPhotos.length > 3
+          ? `${errMsg}. Tip: try with fewer photos (3-5 works best).`
+          : errMsg,
         variant: "destructive",
       });
     } finally {
@@ -497,19 +536,25 @@ export default function Home() {
     setSelectedFile(null);
     setPreviewUrl(null);
     setProgress(0);
+    // Clean up photo preview URLs
+    uploadedPhotos.forEach(p => URL.revokeObjectURL(p.previewUrl));
+    setUploadedPhotos([]);
   };
 
   const handleTryStyle = (styleId: ArtStyle) => {
     setSelectedStyleAndUrl(styleId);
-    if (selectedFile && previewUrl) {
+    const filesToTransform = uploadedPhotos.length > 0
+      ? uploadedPhotos.map(p => p.file)
+      : selectedFile ? [selectedFile] : [];
+    if (filesToTransform.length > 0) {
       setTransformedImage(null);
       setCurrentStep("upload");
-      handleTransform(selectedFile, previewUrl);
+      handleTransform(filesToTransform);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {showCheckoutOverlay && <CheckoutRedirectOverlay />}
       <div className="container px-4 py-6 mx-auto max-w-5xl">
         <p className="text-center text-xs text-muted-foreground mb-1 md:mb-2">{content.flowTagline}</p>
@@ -527,8 +572,8 @@ export default function Home() {
         )}
 
         {(currentStep === "upload" || isTransforming) && (
-          <Card className="p-3 md:p-4 mb-2 md:mb-3">
-            <div className="mb-3 flex justify-start">
+          <Card className="p-3 md:p-4 mb-2 md:mb-3 bg-card/80 backdrop-blur-sm">
+            <div className="mb-3 flex justify-end">
               <StylePicker
                 selectedStyle={selectedStyle}
                 onSelect={setSelectedStyleAndUrl}
@@ -539,7 +584,19 @@ export default function Home() {
               />
             </div>
 
-            {!isTransforming ? (
+            {/* Hidden file input — always in DOM */}
+            <input
+              id="file-input"
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleFileSelect}
+              data-testid="input-file"
+            />
+
+            {!isTransforming && uploadedPhotos.length === 0 ? (
+              /* ── Empty state: initial upload zone ── */
               <div
                 className="border-2 border-dashed rounded-lg p-4 md:p-5 text-center hover-elevate transition-all cursor-pointer"
                 onDrop={handleDrop}
@@ -552,17 +609,72 @@ export default function Home() {
                     <Upload className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold mb-0.5">{content.uploadText}</h3>
-                    <p className="text-xs text-muted-foreground">{content.photoTip}</p>
+                    <h3 className="text-base font-semibold mb-0.5">Add 1–5 photos</h3>
+                    <p className="text-xs text-muted-foreground">Clear, bright photos work best</p>
                   </div>
-                  <input
-                    id="file-input"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    data-testid="input-file"
-                  />
+                </div>
+              </div>
+            ) : !isTransforming && uploadedPhotos.length > 0 ? (
+              /* ── Photos added: grid + counter + add more + Create Portrait ── */
+              <div
+                className="rounded-lg border-2 border-dashed border-border/60 p-3 md:p-4"
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                {/* Photo grid */}
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-3">
+                  {uploadedPhotos.map((photo, idx) => (
+                    <div key={idx} className="relative group aspect-square rounded-md overflow-hidden bg-muted">
+                      <img
+                        src={photo.previewUrl}
+                        alt={`Photo ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removePhoto(idx); }}
+                        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label={`Remove photo ${idx + 1}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      {/* Index badge */}
+                      <span className="absolute bottom-1 left-1 text-[10px] font-medium bg-black/50 text-white rounded px-1 py-0.5 leading-none">
+                        {idx + 1}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Add more tile */}
+                  {uploadedPhotos.length < MAX_PHOTOS && (
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById("file-input")?.click()}
+                      className="aspect-square rounded-md border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer"
+                      aria-label="Add more photos"
+                    >
+                      <Plus className="w-5 h-5 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">Add more</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Footer: counter + Create Portrait */}
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">{uploadedPhotos.length}</span> photo{uploadedPhotos.length !== 1 ? "s" : ""}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCreatePortrait}
+                    disabled={!selectedStyle}
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                    data-testid="button-create-portrait"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Create Portrait
+                  </button>
                 </div>
               </div>
             ) : (
@@ -609,7 +721,7 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <div className="flex flex-col gap-0.5 min-w-0">
+                <div className="flex flex-col gap-1.5 min-w-0">
                   <div className="flex items-center gap-1">
                     <img
                       src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/reviewsukgif.gif?v=1764164124"
@@ -618,11 +730,11 @@ export default function Home() {
                       loading="eager"
                       decoding="async"
                     />
-                    <span className="text-sm font-bold text-foreground">4.8/5</span>
+                    <span className="text-xs font-bold text-foreground">4.8/5</span>
                   </div>
-                  <div className="rounded-full border border-green-300 bg-green-50 px-2.5 py-0.5 inline-flex items-center">
-                    <span className="text-[10px] font-semibold text-green-800">Trusted by 2,000+</span>
-                    <span className="text-[10px] text-green-700 ml-1">happy customers</span>
+                  <div className="rounded-full border border-green-300 bg-green-50 px-2 py-[3px] inline-flex items-center">
+                    <span className="text-[8.5px] font-semibold text-green-800">Trusted by 2,000+</span>
+                    <span className="text-[8.5px] text-green-700 ml-0.5">happy customers</span>
                   </div>
                 </div>
               </div>
@@ -673,7 +785,7 @@ export default function Home() {
                     />
                   ))}
                 </div>
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-1">
                     <img
                       src="https://cdn.shopify.com/s/files/1/0700/2505/2457/files/reviewsukgif.gif?v=1764164124"
@@ -682,18 +794,18 @@ export default function Home() {
                       loading="eager"
                       decoding="async"
                     />
-                    <span className="text-sm font-bold text-foreground">4.8/5</span>
+                    <span className="text-xs font-bold text-foreground">4.8/5</span>
                   </div>
-                  <div className="rounded-full border border-green-300 bg-green-50 px-2.5 py-0.5 inline-flex items-center">
-                    <span className="text-xs font-semibold text-green-800">Trusted by 2,000+</span>
-                    <span className="text-xs text-green-700 ml-1">happy customers</span>
+                  <div className="rounded-full border border-green-300 bg-green-50 px-2 py-[3px] inline-flex items-center">
+                    <span className="text-[8.5px] font-semibold text-green-800">Trusted by 2,000+</span>
+                    <span className="text-[8.5px] text-green-700 ml-0.5">happy customers</span>
                   </div>
                 </div>
               </div>
             </div>
-            <p className="hidden md:block text-center text-xs text-muted-foreground m-0 mb-4 leading-tight">{content.trustText}</p>
+            <p className="hidden md:block text-center text-xs text-muted-foreground mt-2 mb-4 leading-tight">{content.trustText}</p>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
               {(isMobile ? getGalleryImages(activeCategory, selectedStyle, selectedStylePreset).slice(0, 2) : getGalleryImages(activeCategory, selectedStyle, selectedStylePreset)).map((image, index) => (
                 <div
                   key={index}
@@ -703,6 +815,32 @@ export default function Home() {
                   <img src={image} alt={`${activeCategory} ${selectedStyle} portrait ${index + 1}`} className="w-full h-full object-cover" loading={index < 3 ? "eager" : "lazy"} fetchpriority={index < 3 ? "high" : "low"} />
                 </div>
               ))}
+            </div>
+
+            {/* Logos */}
+            <div className="flex items-center justify-center gap-3 mb-8 py-4">
+              <a href="/" className="hover:opacity-70 transition-opacity">
+                <img
+                  src="/logo3.png"
+                  alt="Shooting Star"
+                  className="h-12 w-auto object-contain"
+                  style={{ filter: "sepia(0.4) saturate(0.3) brightness(1.4) opacity(0.7)" }}
+                />
+              </a>
+              <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "hsl(33 40% 82%)" }}>BY</span>
+              <a
+                href="https://portraits.art-and-see.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:opacity-70 transition-opacity"
+              >
+                <img
+                  src="https://portraits.art-and-see.com/logo.png"
+                  alt="Art & See"
+                  className="h-8 w-auto object-contain"
+                  style={{ filter: "sepia(0.4) saturate(0.3) brightness(1.4) opacity(0.7)" }}
+                />
+              </a>
             </div>
           </>
         )}
@@ -819,7 +957,7 @@ export default function Home() {
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Made to last decades</li>
                 </ul>
                 <div className="mb-4">
-                  <FreeShippingBadge />
+                  <FreeShippingBadge deliveryTime="5-7 days" />
                 </div>
                 <p className="text-xs text-primary mb-2">+ Includes digital download</p>
                 <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase("Fine Art Canvas Print", printSize)} disabled={!!purchasingTier} data-testid="button-buy-print">
@@ -867,7 +1005,7 @@ export default function Home() {
                   ))}
                 </ul>
                 <div className="mb-4">
-                  <FreeShippingBadge />
+                  <FreeShippingBadge deliveryTime="2-4 weeks" />
                 </div>
                 <p className="text-xs text-primary mb-2">+ Includes digital download</p>
                 <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase(styleData[selectedStyle].name, handmadeSize)} disabled={!!purchasingTier} data-testid="button-buy-handmade">
@@ -922,7 +1060,7 @@ export default function Home() {
               <AccordionItem value="support">
                 <AccordionTrigger><span className="font-medium">Need Support?</span></AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-muted-foreground">We're happy to help! Contact us at support@art-and-see.com.</p>
+                  <p className="text-muted-foreground">We're happy to help! Contact us at info@art-and-see.com.</p>
                 </AccordionContent>
               </AccordionItem>
               <AccordionItem value="artists">

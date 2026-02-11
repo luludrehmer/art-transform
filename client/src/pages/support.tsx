@@ -1,9 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Mail, MessageCircle, Clock } from "lucide-react";
+import { Mail, Phone, Clock } from "lucide-react";
 
 export default function Support() {
   return (
@@ -16,21 +12,32 @@ export default function Support() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        <div className="grid md:grid-cols-3 gap-6">
           <Card className="p-6 text-center">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Mail className="w-6 h-6 text-primary" />
             </div>
             <h3 className="font-semibold mb-2">Email Us</h3>
-            <p className="text-sm text-muted-foreground">support@arttransform.com</p>
+            <a
+              href="mailto:info@art-and-see.com"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              info@art-and-see.com
+            </a>
           </Card>
 
           <Card className="p-6 text-center">
             <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <MessageCircle className="w-6 h-6 text-primary" />
+              <Phone className="w-6 h-6 text-primary" />
             </div>
-            <h3 className="font-semibold mb-2">Live Chat</h3>
-            <p className="text-sm text-muted-foreground">Available 9am-5pm EST</p>
+            <h3 className="font-semibold mb-2">Call Us</h3>
+            <a
+              href="tel:+13322960276"
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              +1 (332) 296 0276
+            </a>
+            <p className="text-xs text-muted-foreground/60 mt-1">WhatsApp available</p>
           </Card>
 
           <Card className="p-6 text-center">
@@ -38,41 +45,10 @@ export default function Support() {
               <Clock className="w-6 h-6 text-primary" />
             </div>
             <h3 className="font-semibold mb-2">Response Time</h3>
-            <p className="text-sm text-muted-foreground">Usually within 24 hours</p>
+            <p className="text-sm text-muted-foreground">Mon–Fri, 9 AM – 6 PM EST</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Usually within 24 hours</p>
           </Card>
         </div>
-
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-6">Send us a message</h2>
-          <form className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" placeholder="Your name" data-testid="input-name" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="your@email.com" data-testid="input-email" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input id="subject" placeholder="How can we help?" data-testid="input-subject" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="message">Message</Label>
-              <Textarea 
-                id="message" 
-                placeholder="Tell us more about your question or issue..." 
-                className="min-h-[150px]"
-                data-testid="input-message"
-              />
-            </div>
-            <Button type="submit" className="w-full" data-testid="button-send-message">
-              Send Message
-            </Button>
-          </form>
-        </Card>
       </div>
     </div>
   );

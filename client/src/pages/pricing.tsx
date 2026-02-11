@@ -98,7 +98,7 @@ export default function Pricing() {
               </li>
             </ul>
             <div className="mb-6">
-              <FreeShippingBadge />
+              <FreeShippingBadge deliveryTime="5-7 days" />
             </div>
             <Button className="w-full" data-testid="button-buy-print">
               Order Print
@@ -133,7 +133,7 @@ export default function Pricing() {
               </li>
             </ul>
             <div className="mb-6">
-              <FreeShippingBadge />
+              <FreeShippingBadge deliveryTime="2-4 weeks" />
             </div>
             <Button className="w-full" data-testid="button-buy-oil-painting">
               Order Oil Painting

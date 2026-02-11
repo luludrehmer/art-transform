@@ -2,7 +2,7 @@ import { buildMoodPrompt } from "@shared/build-prompt-from-template";
 
 /**
  * Top-level art style presets. Combined with the selected medium (Oil, Acrylic, etc.)
- * when sending the transform prompt. Mood text comes from prompt-template.json (v5.1).
+ * when sending the transform prompt. Mood text comes from prompt-template.json (v8.6).
  */
 export type StylePresetId = "none" | "intelligent" | "neoclassical" | "royal_noble" | "heritage";
 

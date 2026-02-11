@@ -7,7 +7,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { setupAuth, isAuthenticated } from "./auth";
 import { generateGalleryImage } from "./generate-gallery";
 import sharp from "sharp";
-import { getFormatBlock, getIdentityAnchor, getIdentityGuard, getStyleBlock } from "@shared/build-prompt-from-template";
+import { getFormatBlock, getIdentityAnchor, getIdentityGuard, getStyleBlock, getMultiPhotoInstruction } from "@shared/build-prompt-from-template";
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || "");
 
@@ -55,7 +55,7 @@ function normalizePromptText(s: string): string {
 }
 
 /**
- * Builds the full prompt for Gemini from prompt-template.json (v5.1).
+ * Builds the full prompt for Gemini from prompt-template.json (v8.6).
  * When a mood preset is set, its vision is placed first; technique (style) is then applied.
  */
 const MULTI_PERSON_CATEGORIES = ["family", "kids", "couples"];
@@ -65,7 +65,7 @@ function getMultiSubjectRule(category?: string): string {
   return `\n\nMULTI-SUBJECT RULE: This photo contains MULTIPLE people. You MUST include EVERY person visible in the input photo. Count them. Paint ALL of them — same number, same arrangement, same relationships. NEVER drop, merge, crop out, or omit any person. NEVER add people who are not in the photo.`;
 }
 
-function buildPrompt(style: string, category?: string, stylePresetPrompt?: string | null): string {
+function buildPrompt(style: string, category?: string, stylePresetPrompt?: string | null, photoCount = 1): string {
   const technique = styleTechniqueNames[style] || "oil painting";
   const categoryLabel = category && categoryLabels[category] ? categoryLabels[category] : "photo";
   const styleSuffix = getStyleBlock(style);
@@ -73,40 +73,50 @@ function buildPrompt(style: string, category?: string, stylePresetPrompt?: strin
   const identityAnchor = getIdentityAnchor(category);
   const identityGuard = getIdentityGuard(category);
   const multiRule = getMultiSubjectRule(category);
+  const multiPhotoBlock = getMultiPhotoInstruction(photoCount);
+  const photoRef = photoCount > 1 ? `these ${photoCount} reference photos` : `this ${categoryLabel} photo`;
+  const multiPhotoReminder = photoCount > 1
+    ? `\n\nFINAL REMINDER: You received ${photoCount} reference photos. Identify every unique person across all photos and include ALL of them in the final portrait. Do NOT leave anyone out.`
+    : "";
   const trimmedPreset = stylePresetPrompt?.trim();
   if (trimmedPreset) {
     const vision = normalizePromptText(trimmedPreset);
-    return `${identityGuard}${multiRule}\n\nTransform this ${categoryLabel} photo into an artwork that fulfills this exact vision: ${vision}. The result must be a realistic handmade ${technique} using authentic ${technique} techniques.${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
+    return `${identityGuard}${multiRule}${multiPhotoBlock}\n\nTransform ${photoRef} into an artwork that fulfills this exact vision: ${vision}. The result must be a realistic handmade ${technique} using authentic ${technique} techniques.${styleSuffix}${formatBlock}\n\n${identityAnchor}${multiPhotoReminder}`;
   }
-  return `${identityGuard}${multiRule}\n\nTransform this ${categoryLabel} photo into a realistic handmade ${technique} using authentic ${technique} techniques. ${identityAnchor}${styleSuffix}${formatBlock}\n\n${identityAnchor}`;
+  return `${identityGuard}${multiRule}${multiPhotoBlock}\n\nTransform ${photoRef} into a realistic handmade ${technique} using authentic ${technique} techniques. ${identityAnchor}${styleSuffix}${formatBlock}\n\n${identityAnchor}${multiPhotoReminder}`;
 }
 
 const transformWithGemini = async (
-  originalImageUrl: string,
+  imageUrls: string[],
   style: string,
   category?: string,
   stylePresetPrompt?: string | null
 ): Promise<string> => {
   try {
-    // Extract base64 data from data URL
-    const base64Match = originalImageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!base64Match) {
-      throw new Error("Invalid image data URL format");
-    }
+    // Parse all images
+    const images = imageUrls.map((url, idx) => {
+      const match = url.match(/^data:image\/(\w+);base64,(.+)$/);
+      if (!match) throw new Error(`Invalid image data URL format for photo ${idx + 1}`);
+      return { mimeType: match[1], base64Data: match[2] };
+    });
 
-    const [, mimeType, base64Data] = base64Match;
-
-    // Detect input image orientation to set correct aspect ratio
+    // Detect aspect ratio: landscape for groups (3+ photos likely = 3+ people), else from first image
     let aspectRatio = "3:4"; // default portrait
-    try {
-      const imgBuffer = Buffer.from(base64Data, "base64");
-      const metadata = await sharp(imgBuffer).metadata();
-      if (metadata.width && metadata.height && metadata.width > metadata.height) {
-        aspectRatio = "4:3"; // landscape
+    if (images.length >= 3) {
+      // 3+ reference photos likely means a group → force landscape so everyone fits
+      aspectRatio = "4:3";
+      console.log(`[transform] ${images.length} photos → forcing landscape 4:3 for group portrait`);
+    } else {
+      try {
+        const imgBuffer = Buffer.from(images[0].base64Data, "base64");
+        const metadata = await sharp(imgBuffer).metadata();
+        if (metadata.width && metadata.height && metadata.width > metadata.height) {
+          aspectRatio = "4:3"; // landscape
+        }
+        console.log(`[transform] image ${metadata.width}x${metadata.height} → aspectRatio ${aspectRatio} (${images.length} photo${images.length > 1 ? "s" : ""})`);
+      } catch (e) {
+        console.log("[transform] could not detect image orientation, using 3:4");
       }
-      console.log(`[transform] image ${metadata.width}x${metadata.height} → aspectRatio ${aspectRatio}`);
-    } catch (e) {
-      console.log("[transform] could not detect image orientation, using 3:4");
     }
 
     const model = genAI.getGenerativeModel({
@@ -117,21 +127,28 @@ const transformWithGemini = async (
       } as any,
     });
 
-    const prompt = buildPrompt(style, category, stylePresetPrompt);
-    console.log("[transform] prompt preview:", prompt.slice(0, 200) + (prompt.length > 200 ? "…" : ""));
+    const photoCount = images.length;
+    const prompt = buildPrompt(style, category, stylePresetPrompt, photoCount);
+    console.log(`[transform] ${photoCount} photo(s), prompt preview:`, prompt.slice(0, 200) + (prompt.length > 200 ? "…" : ""));
 
-    const GEMINI_TIMEOUT_MS = 90_000;
-    const generatePromise = model.generateContent([
-      {
+    // Build content parts: all images first, then the text prompt
+    const contentParts: Array<{ inlineData: { data: string; mimeType: string } } | { text: string }> = [];
+    for (const img of images) {
+      contentParts.push({
         inlineData: {
-          data: base64Data,
-          mimeType: `image/${mimeType}`,
+          data: img.base64Data,
+          mimeType: `image/${img.mimeType}`,
         },
-      },
-      { text: prompt },
-    ]);
+      });
+    }
+    contentParts.push({ text: prompt });
+
+    // Scale timeout with photo count: 90s base + 15s per additional photo
+    const GEMINI_TIMEOUT_MS = photoCount > 1 ? 90_000 + (photoCount * 15_000) : 90_000;
+    console.log(`[transform] Gemini timeout: ${GEMINI_TIMEOUT_MS / 1000}s for ${photoCount} photo(s)`);
+    const generatePromise = model.generateContent(contentParts);
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Gemini request timed out (90s)")), GEMINI_TIMEOUT_MS)
+      setTimeout(() => reject(new Error(`Gemini request timed out (${Math.round(GEMINI_TIMEOUT_MS / 1000)}s)`)), GEMINI_TIMEOUT_MS)
     );
     const result = await Promise.race([generatePromise, timeoutPromise]);
 
@@ -223,6 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const body = req.body as {
         originalImageUrl?: string;
+        additionalImageUrls?: string[];
         style?: string;
         category?: string;
         width?: number;
@@ -238,7 +256,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const width = body.width;
       const height = body.height;
       const stylePresetPrompt = body.stylePresetPrompt ?? null;
-      console.log("[transform] received stylePresetPrompt:", stylePresetPrompt ? stylePresetPrompt.slice(0, 80) + "..." : "NONE");
+      // Collect all image URLs: primary + any additional
+      const allImageUrls = [validatedData.originalImageUrl];
+      if (Array.isArray(body.additionalImageUrls)) {
+        allImageUrls.push(...body.additionalImageUrls.filter(u => typeof u === "string" && u.startsWith("data:image/")));
+      }
+      const totalPayloadMB = allImageUrls.reduce((sum, u) => sum + u.length, 0) / (1024 * 1024);
+      console.log(`[transform] ${allImageUrls.length} photo(s), ~${totalPayloadMB.toFixed(1)}MB payload, stylePresetPrompt:`, stylePresetPrompt ? stylePresetPrompt.slice(0, 80) + "..." : "NONE");
 
       if (!validatedData.originalImageUrl || validatedData.originalImageUrl.length === 0) {
         res.status(400).json({ error: "Original image is required" });
@@ -251,25 +275,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       (async () => {
+        // Helper: extract readable message from any error type (including WebSocket ErrorEvent)
+        const extractErrorMessage = (err: unknown): string => {
+          if (err instanceof Error) return err.message;
+          if (typeof err === "object" && err !== null) {
+            // WebSocket ErrorEvent from Neon has Symbol(kMessage) but also often has .message
+            const anyErr = err as Record<string, unknown>;
+            if (typeof anyErr.message === "string") return anyErr.message;
+            if (typeof anyErr.error === "object" && anyErr.error !== null) {
+              const inner = anyErr.error as Record<string, unknown>;
+              if (typeof inner.message === "string") return inner.message;
+            }
+          }
+          try { return JSON.stringify(err); } catch { return "Unknown error"; }
+        };
+
+        // Helper: retry DB update (Neon WebSocket can drop during long Gemini processing)
+        const updateWithRetry = async (id: string, updates: Parameters<typeof storage.updateTransformation>[1], retries = 3) => {
+          for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+              return await storage.updateTransformation(id, updates);
+            } catch (dbErr) {
+              const dbMsg = extractErrorMessage(dbErr);
+              console.error(`[transform] DB update attempt ${attempt}/${retries} failed: ${dbMsg}`);
+              if (attempt === retries) throw dbErr;
+              // Wait before retry (exponential: 1s, 2s, 4s)
+              await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+            }
+          }
+        };
+
         try {
           const transformedImageUrl = await transformWithGemini(
-            validatedData.originalImageUrl,
+            allImageUrls,
             validatedData.style,
             category,
             stylePresetPrompt
           );
           
-          await storage.updateTransformation(transformation.id, {
+          await updateWithRetry(transformation.id, {
             status: "completed",
             transformedImageUrl,
           });
+          console.log(`[transform] ✓ Saved completed transformation ${transformation.id}`);
         } catch (error) {
-          const errMsg = error instanceof Error ? error.message : String(error);
-          console.error("Transformation processing error:", errMsg, error);
-          await storage.updateTransformation(transformation.id, {
-            status: "failed",
-            errorMessage: errMsg,
-          });
+          const errMsg = extractErrorMessage(error);
+          console.error("Transformation processing error:", errMsg);
+          try {
+            await updateWithRetry(transformation.id, {
+              status: "failed",
+              errorMessage: errMsg.slice(0, 500),
+            });
+          } catch (dbErr) {
+            console.error("[transform] CRITICAL: Could not save failure status to DB:", extractErrorMessage(dbErr));
+          }
         }
       })();
 

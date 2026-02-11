@@ -6,7 +6,7 @@ export default function About() {
     <div className="flex-1 py-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 font-display">About ArtTransform</h1>
+          <h1 className="text-4xl font-bold mb-4 font-display">About Art&amp;See</h1>
           <p className="text-muted-foreground text-lg">
             Transforming your cherished photos into timeless works of art.
           </p>
@@ -14,7 +14,7 @@ export default function About() {
 
         <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
           <p>
-            ArtTransform was born from a simple idea: everyone deserves to see their loved ones 
+            Art&amp;See was born from a simple idea: everyone deserves to see their loved ones 
             immortalized as beautiful works of art. Whether it's your beloved pet, your family, 
             or a special moment captured in time, we use cutting-edge AI technology to transform 
             ordinary photos into extraordinary masterpieces.

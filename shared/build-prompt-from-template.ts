@@ -1,6 +1,6 @@
 /**
- * Builds generation prompt segments from the canonical prompt-template.json (v5.1).
- * Single source of truth: docs/prompt-template.json is copied to shared/prompt-template.json.
+ * Builds generation prompt segments from the canonical prompt-template.json (v8.6).
+ * Single source of truth: shared/prompt-template.json.
  * Used by server (routes) and client (style-presets).
  */
 
@@ -9,114 +9,179 @@ import raw from "./prompt-template.json";
 type MoodId = "royal_noble" | "neoclassical" | "heritage";
 
 const t = raw as unknown as {
-  identity: { humans: string; animals: string };
-  format: {
-    full_bleed: { rule: string; paper_styles: string };
-    negative_prompt: string;
+  IDENTITY_LOCK: {
+    _priority: string;
+    face: { preserve: string; never: string };
+    expression: { preserve: string; never: string };
+    hair: { preserve: string; headpieces: string; never: string };
+    animals: { preserve: string };
   };
-  critical_rules: string[];
+  system: {
+    role: string;
+    you_change: string;
+    you_never_change: string;
+    quality: string;
+    hierarchy: string;
+    attention: string;
+    lighting_and_atmosphere: string;
+    user_intent_detection: string;
+  };
+  subject_analysis: { detect: string[]; never: string };
+  composition: { rule: string; extension: string; groups: string; format_for_groups: string };
   moods: Record<
     MoodId,
     {
-      concept: string;
-      attire_humans: Record<string, unknown>;
-      attire_animals: Record<string, unknown>;
-      background: Record<string, unknown>;
+      id: string;
+      label: string;
+      vibe: string;
+      attire: { vibe: string; never?: string };
+      attire_animals: { vibe: string };
+      background: { vibe: string; never?: string };
       lighting: string;
-      palette: string[];
+      palette_color: string;
+      palette_monochrome: string;
     }
   >;
   styles: Record<
     string,
     {
-      medium?: string;
-      technique?: string;
+      id?: string;
+      label?: string;
+      is_color?: boolean;
+      vibe?: string;
+      face?: string;
+      everything_else?: string;
+      surface?: string;
+      lighting?: string;
       coverage?: string;
-      full_coverage?: string;
-      negative_prompt?: string;
+      palette_handling?: string;
+      never?: string;
+      // universal keys
+      marks?: string;
+      masters_note?: string;
+      ornament_rule?: string;
     }
   >;
+  format: {
+    aspect_ratio: { vertical: string; horizontal: string; rule: string; group_override: string };
+    full_bleed: string;
+    never: string;
+  };
+  multi_photo_intelligence: {
+    _description: string;
+    analysis: string;
+    same_person_multiple_angles: string;
+    different_people: string;
+    mixed_scenario: string;
+    group_composition: string;
+    single_photo_fallback: string;
+    never: string;
+  };
+  identity_negative_prompt: string;
+  ornament_negative_prompt: string;
+  critical_rules: string[];
 };
 
 const MULTI_PERSON_CATEGORIES = ["family", "kids", "couples"];
 
-/** Identity anchor — format.identity from JSON. */
+/** Identity anchor — concise identity preservation statement. */
 export function getIdentityAnchor(category?: string): string {
   const isPet = category === "pets";
   const isMulti = category ? MULTI_PERSON_CATEGORIES.includes(category) : false;
   if (isPet) {
-    return `CRITICAL IDENTITY RULE: Preserve the subject's exact breed, fur color/pattern, markings, ear shape, eye color, body proportions, and facial expression from the original photo. Do NOT alter, idealize, or stylize any physical feature.`;
+    return `CRITICAL IDENTITY RULE: ${t.IDENTITY_LOCK.animals.preserve} Do NOT alter, idealize, or stylize any physical feature.`;
   }
-  const subjectRef = isMulti ? "EVERY person" : "the subject";
-  const faceRef = isMulti ? "Each face" : "The face";
-  return `CRITICAL IDENTITY RULE: Preserve ${subjectRef}'s EXACT facial features, face shape, bone structure, eye color, eye shape, nose shape, lip shape, skin tone, skin texture, facial hair (beard, mustache, stubble — keep or remove NOTHING), hairstyle, hair color, hair length, and facial expression from the original photo. ${faceRef} in the output must be recognizable as the SAME person. Do NOT alter, idealize, beautify, age, de-age, or stylize ANY facial or hair feature. Expressions must match the original photo exactly.${isMulti ? " Include ALL people from the photo — do NOT drop, merge, or omit anyone." : ""}`;
+  const subjectRef = isMulti ? "EVERY person" : "every subject";
+  const faceRef = isMulti ? "Each face" : "Each face";
+  return `CRITICAL IDENTITY RULE: Preserve ${subjectRef}'s EXACT likeness — ${t.IDENTITY_LOCK.face.preserve} ${t.IDENTITY_LOCK.expression.preserve} ${t.IDENTITY_LOCK.hair.preserve} ${faceRef} in the output must be recognizable as the SAME person from the reference. ${t.IDENTITY_LOCK.face.never} ${t.IDENTITY_LOCK.expression.never} Include ALL unique people from the reference photo(s) — do NOT drop, merge, or omit anyone.`;
 }
 
 /**
  * Strong identity guard — placed at the START of prompts to prevent the model
- * from altering faces, hair, or expressions. More assertive than the anchor.
+ * from altering faces, hair, or expressions. Most assertive statement.
  */
 export function getIdentityGuard(category?: string): string {
   const isPet = category === "pets";
   const isMulti = category ? MULTI_PERSON_CATEGORIES.includes(category) : false;
   if (isPet) {
-    return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT'S APPEARANCE: The animal's face, body, breed, fur, markings, ear shape, eye color, and expression must be pixel-level faithful to the input photo. Change ONLY the art medium, background, lighting, and any requested attire/accessories. The subject's physical appearance is LOCKED.`;
+    return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT'S APPEARANCE: ${t.IDENTITY_LOCK._priority} ${t.IDENTITY_LOCK.animals.preserve} Change ONLY the art medium, background, lighting, and any requested attire/accessories. The subject's physical appearance is LOCKED.`;
   }
   if (isMulti) {
-    return `ABSOLUTE RULE — INCLUDE EVERY PERSON FROM THE PHOTO AND DO NOT MODIFY ANYONE'S FACE, HAIR, OR EXPRESSION: Count the people in the input photo and include ALL of them in the output — same number, same positions, same relationships. Each person's facial features, face shape, skin tone, facial hair, hairstyle, hair color, and facial expression must be pixel-level faithful to the input. Change ONLY the art medium, clothing/attire, background, and lighting. Every face and hairstyle is LOCKED.`;
+    return `ABSOLUTE RULE — INCLUDE EVERY PERSON FROM THE PHOTOS AND DO NOT MODIFY ANYONE'S FACE, HAIR, OR EXPRESSION: ${t.IDENTITY_LOCK._priority} Count every unique person across ALL input photos and include ALL of them in the output — same number, same relationships. ${t.IDENTITY_LOCK.face.preserve} ${t.IDENTITY_LOCK.hair.preserve} ${t.IDENTITY_LOCK.expression.preserve} Change ONLY the art medium, clothing/attire, background, and lighting. Every face and hairstyle is LOCKED.`;
   }
-  return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT'S FACE, HAIR, OR EXPRESSION: The person's facial features, face shape, skin tone, facial hair, hairstyle, hair color, and facial expression must be pixel-level faithful to the input photo. Change ONLY the art medium, clothing/attire, background, and lighting. The subject's face and hair are LOCKED — treat them as a sacred reference that cannot be altered, idealized, or stylized in any way.`;
+  return `ABSOLUTE RULE — DO NOT MODIFY THE SUBJECT(S) FACE, HAIR, OR EXPRESSION: ${t.IDENTITY_LOCK._priority} ${t.IDENTITY_LOCK.face.preserve} ${t.IDENTITY_LOCK.hair.preserve} ${t.IDENTITY_LOCK.expression.preserve} Change ONLY the art medium, clothing/attire, background, and lighting. If multiple reference photos are provided, detect whether they show the SAME person (use all for accuracy) or DIFFERENT people (include all in the portrait). Every face and hairstyle is LOCKED — treat them as a sacred reference that cannot be altered, idealized, or stylized in any way.`;
 }
 
-/** Format block — format.full_bleed + critical_rules (museum) + format.negative_prompt from JSON. */
-export function getFormatBlock(): string {
-  const museum = t.critical_rules[0] ?? "MUSEUM QUALITY — every output must look like it belongs in a national gallery";
-  const subjectStar = t.critical_rules[1] ?? "THE SUBJECT IS THE STAR — 60-70% of frame, sharpest detail, brightest light";
+/**
+ * Multi-photo intelligence instruction — appended to the prompt when
+ * the user provides more than one reference photo.
+ * Tells the model to act as a smart portrait wizard: analyze all photos,
+ * detect same-person vs different-people, and compose accordingly.
+ */
+export function getMultiPhotoInstruction(photoCount: number): string {
+  if (photoCount <= 1) return "";
+  const mpi = t.multi_photo_intelligence;
   return `
 
-${museum}: Visible brushstrokes, craquelure, warm varnish sheen; ${subjectStar} — subject GLOWS; rim light on hair/shoulders/fur; Rembrandt triangle on faces. Indistinguishable from a painting in the National Gallery or the Met.
+MULTI-PHOTO INTELLIGENCE — ${photoCount} REFERENCE PHOTOS PROVIDED:
+STEP 1: LOOK AT EVERY PHOTO. Count how many UNIQUE people appear across all ${photoCount} photos. Some photos may show the same person from different angles — use facial features to match them. List the unique individuals mentally before proceeding.
+STEP 2: ${mpi.analysis}
+STEP 3: ${mpi.same_person_multiple_angles}
+STEP 4: ${mpi.different_people}
+STEP 5: ${mpi.mixed_scenario}
+STEP 6: ${mpi.group_composition}
 
-Format — SUBJECT 60-70% & FULL BLEED (artwork covers 100% of surface):
-${t.format.full_bleed.rule} ${t.format.full_bleed.paper_styles} Show ONLY the artwork — no frame, no canvas/paper edge, no wall, no easel. Animals ALERT and DIGNIFIED.
+CRITICAL OUTPUT RULE: The final portrait MUST contain ALL unique people you identified in Step 1. If you counted 4 unique people, the output MUST show exactly 4 people. If you counted 2, show exactly 2. NEVER drop anyone. NEVER show fewer people than you identified.
 
-Negative prompt (always apply):
-${t.format.negative_prompt}
-No altered facial features, no changed facial expression, no changed hairstyle, no added or removed facial hair, no idealized or beautified face, no aged or de-aged face, no changed skin tone, no changed eye color, no changed nose shape, no changed lip shape.`;
+FORMAT FOR GROUPS: If 3+ unique people will be in the portrait, use HORIZONTAL/LANDSCAPE composition so everyone fits comfortably with full faces visible. Do not cram many people into a narrow vertical frame.
+
+${mpi.never}`;
 }
 
-/** Style block — styles[id] from JSON: medium + technique + coverage + negative_prompt. */
+/** Format block — format rules + critical rules + negative prompts from JSON. */
+export function getFormatBlock(): string {
+  return `
+
+${t.system.attention}
+${t.system.lighting_and_atmosphere}
+
+USER INTENT DETECTION:
+${t.system.user_intent_detection}
+
+Format — FULL BLEED:
+${t.format.full_bleed}
+${t.format.aspect_ratio.group_override}
+${t.composition.format_for_groups}
+
+Negative prompt (always apply):
+${t.format.never}
+${t.identity_negative_prompt}
+${t.ornament_negative_prompt}`;
+}
+
+/** Style block — styles[id] from JSON: vibe + face + surface + coverage + never. */
 export function getStyleBlock(styleId: string): string {
   const s = t.styles[styleId];
   if (!s) return "";
-  const coverage = s.full_coverage ?? s.coverage ?? "";
-  const neg = s.negative_prompt ? ` Negative: ${s.negative_prompt}.` : "";
-  return ` ${s.medium}. ${s.technique}. ${coverage}.${neg}`;
-}
-
-/** Pick up to N random string items from attire object for variety without bloating prompt. */
-function pickAttireHighlights(obj: Record<string, unknown> | null | undefined, max = 3): string {
-  if (!obj || typeof obj !== "object") return "";
-  const items: string[] = [];
-  for (const [key, v] of Object.entries(obj)) {
-    // Skip meta keys
-    if (key === "instruction" || key === "principle") continue;
-    if (Array.isArray(v)) {
-      // Pick 1-2 from each array
-      const shuffled = [...v].sort(() => Math.random() - 0.5);
-      items.push(...shuffled.slice(0, 2).map(String));
-    } else if (typeof v === "string" && v.trim()) {
-      items.push(v.trim());
-    }
-  }
-  // Shuffle and cap
-  const shuffled = items.sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, max).join("; ");
+  const universal = t.styles.universal;
+  const parts: string[] = [];
+  if (s.vibe) parts.push(s.vibe);
+  if (s.face) parts.push(`Face: ${s.face}`);
+  if (s.everything_else) parts.push(s.everything_else);
+  if (s.surface) parts.push(`Surface: ${s.surface}`);
+  if (s.coverage) parts.push(`Coverage: ${s.coverage}`);
+  if (s.palette_handling) parts.push(s.palette_handling);
+  if (s.lighting) parts.push(`Lighting: ${s.lighting}`);
+  if (s.never) parts.push(`NEVER: ${s.never}`);
+  if (universal?.ornament_rule) parts.push(universal.ornament_rule);
+  if (universal?.marks) parts.push(`Marks: ${universal.marks}`);
+  return ` ${parts.join(". ")}.`;
 }
 
 /**
  * Builds the mood preset prompt from JSON. Returns string with [MEDIUM] and [SUBJECT] placeholders;
  * caller (e.g. style-presets resolveStylePresetPrompt) replaces them.
- * COMPACT version — keeps prompt under ~250 words to prevent identity dilution.
+ * COMPACT version — keeps prompt focused to prevent identity dilution.
  */
 export function buildMoodPrompt(moodId: MoodId): string {
   const m = t.moods[moodId];
@@ -124,37 +189,24 @@ export function buildMoodPrompt(moodId: MoodId): string {
 
   const parts: string[] = [];
 
-  parts.push("[MEDIUM] portrait of [SUBJECT]. Authentic masterwork painting — depth and craftsmanship of Old Masters.");
-  parts.push(m.concept);
-  parts.push("SUBJECT 60-70% of frame.");
+  parts.push(`[MEDIUM] portrait of [SUBJECT]. ${t.system.quality}`);
+  parts.push(m.vibe);
 
-  // Compact attire — pick highlights, not exhaustive lists
-  const animalHighlights = pickAttireHighlights(m.attire_animals as Record<string, unknown>, 3);
-  if (animalHighlights) {
-    parts.push(`If animal: ${animalHighlights}.`);
-  }
+  // Attire
+  parts.push(`Attire: ${m.attire.vibe}`);
+  if (m.attire.never) parts.push(m.attire.never);
+  // Hair protection reminder — prevents mood attire (crowns, headpieces) from reshaping hair
+  parts.push(`HAIR REMINDER: ${t.IDENTITY_LOCK.hair.preserve} ${t.IDENTITY_LOCK.hair.headpieces} ${t.IDENTITY_LOCK.hair.never}`);
+  parts.push(`If animal: ${m.attire_animals.vibe}`);
 
-  const humanHighlights = pickAttireHighlights(m.attire_humans as Record<string, unknown>, 4);
-  if (humanHighlights) {
-    parts.push(`If human: ${humanHighlights}.`);
-  }
+  // Background
+  parts.push(`BACKGROUND: ${m.background.vibe}`);
+  if (m.background.never) parts.push(m.background.never);
 
-  // Compact background — type + technique only
-  const bg = m.background as {
-    type?: string;
-    description?: string;
-    technique?: string;
-    style_reference?: string;
-  } | null;
-  if (bg?.type) {
-    let bgLine = `BACKGROUND: ${bg.type}`;
-    if (bg.description) bgLine += ` — ${bg.description}`;
-    if (bg.technique) bgLine += ` ${bg.technique}`;
-    parts.push(bgLine.trim() + ".");
-  }
-
+  // Lighting & palette
   parts.push(`LIGHTING: ${m.lighting}`);
-  parts.push(`PALETTE: ${m.palette.join(", ")}.`);
+  parts.push(`PALETTE (color): ${m.palette_color}`);
+  parts.push(`PALETTE (monochrome): ${m.palette_monochrome}`);
 
   return parts.join(" ");
 }

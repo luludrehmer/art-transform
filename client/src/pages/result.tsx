@@ -364,7 +364,7 @@ export default function Result() {
               </li>
             </ul>
             <div className="mb-3">
-              <FreeShippingBadge />
+              <FreeShippingBadge deliveryTime="5-7 days" />
             </div>
             <p className="text-xs text-muted-foreground mb-4">+ Includes digital download</p>
             <Button 
@@ -439,7 +439,7 @@ export default function Result() {
               </li>
             </ul>
             <div className="mb-3">
-              <FreeShippingBadge />
+              <FreeShippingBadge deliveryTime="2-4 weeks" />
             </div>
             <p className="text-xs text-muted-foreground mb-4">+ Includes digital download</p>
             <Button 
@@ -575,7 +575,7 @@ export default function Result() {
             </AccordionTrigger>
             <AccordionContent>
               <p className="text-muted-foreground">
-                We're happy to help! Contact us at support@art-and-see.com for any
+                We're happy to help! Contact us at info@art-and-see.com for any
                 questions about your order.
               </p>
             </AccordionContent>

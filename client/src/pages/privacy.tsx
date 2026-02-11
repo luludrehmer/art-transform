@@ -43,7 +43,7 @@ export default function Privacy() {
           <h2>6. Contact Us</h2>
           <p>
             If you have any questions about this Privacy Policy, please contact us at 
-            privacy@arttransform.com.
+            info@art-and-see.com.
           </p>
         </div>
       </div>

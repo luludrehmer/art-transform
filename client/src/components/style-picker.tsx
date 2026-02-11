@@ -49,12 +49,13 @@ interface StylePickerProps {
   stepLabel: string;
 }
 
-const dropdownCardBase =
-  "flex flex-col items-center rounded-lg border-2 p-2.5 transition-all text-left font-sans " +
-  "hover:border-primary/50 hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2";
-const dropdownCardSelected = "border-primary bg-primary/5";
-const dropdownCardDefault = "border-border bg-background";
-const dropdownLabel = "text-xs font-medium mt-2 line-clamp-1 w-full text-center text-foreground";
+/* Card styles — only the selected card has visible ring + tinted bg; unselected are plain */
+const cardBase =
+  "flex flex-col items-center rounded-lg p-1.5 transition-all text-left font-sans cursor-pointer " +
+  "outline-none focus:outline-none focus-visible:outline-none";
+const cardSelected = "ring-2 ring-primary bg-primary/10";
+const cardDefault = "opacity-75 hover:opacity-100 hover:bg-muted/20";
+const cardLabel = "text-[8.5px] font-medium mt-1.5 line-clamp-1 w-full text-center leading-tight";
 
 function StyleGrid({
   selectedStyle,
@@ -68,36 +69,29 @@ function StyleGrid({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4",
-        className
-      )}
-    >
-      {allStyles.map((style) => (
-        <button
-          key={style.id}
-          type="button"
-          onClick={() => {
-            onSelect(style.id as ArtStyle);
-            onPick?.();
-          }}
-          className={cn(
-            dropdownCardBase,
-            selectedStyle === style.id ? dropdownCardSelected : dropdownCardDefault
-          )}
-          data-testid={`button-style-${style.id}`}
-        >
-          <div className="w-full aspect-square rounded-md overflow-hidden flex-shrink-0 bg-muted min-h-0">
-            <img
-              src={style.image}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <span className={dropdownLabel}>{style.name}</span>
-        </button>
-      ))}
+    <div className={cn("grid grid-cols-3 gap-2.5", className)}>
+      {allStyles.map((style) => {
+        const isSelected = selectedStyle === style.id;
+        return (
+          <button
+            key={style.id}
+            type="button"
+            onClick={() => {
+              onSelect(style.id as ArtStyle);
+              onPick?.();
+            }}
+            className={cn(cardBase, isSelected ? cardSelected : cardDefault)}
+            data-testid={`button-style-${style.id}`}
+          >
+            <div className="w-full aspect-square rounded-md overflow-hidden flex-shrink-0 bg-muted min-h-0">
+              <img src={style.image} alt="" className="w-full h-full object-cover" />
+            </div>
+            <span className={cn(cardLabel, isSelected ? "text-primary font-semibold" : "text-foreground")}>
+              {style.name}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -120,14 +114,14 @@ export function StylePicker({
       type="button"
       disabled={disabled}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-border/80 bg-muted/20 px-2 py-1 text-left transition-all min-h-0",
-        "hover:border-border hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring focus:ring-offset-1",
+        "inline-flex items-center gap-1 px-1 py-0.5 text-left transition-all min-h-0",
+        "hover:opacity-70 focus:outline-none",
         "disabled:opacity-50 disabled:pointer-events-none"
       )}
       data-testid="style-picker-trigger"
     >
-      <span className="font-sans text-xs text-muted-foreground whitespace-nowrap">Choose a style</span>
-      <ChevronDown className="w-3 h-3 text-muted-foreground/70 flex-shrink-0" />
+      <span className="font-sans text-[11px] text-muted-foreground/60 whitespace-nowrap">Choose a style</span>
+      <ChevronDown className="w-2.5 h-2.5 text-muted-foreground/40 flex-shrink-0" />
     </button>
   );
 
@@ -137,10 +131,11 @@ export function StylePicker({
     </h3>
   );
 
+  /* Mood cards — close dropdown on click */
   const renderPresetSection = (onPick?: () => void) => (
-    <div className="mb-5">
+    <div className="mb-8">
       <SectionTitle>Mood</SectionTitle>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
         {STYLE_PRESET_IDS.map((id) => {
           const Icon = PRESET_ICONS[id];
           const isSelected = selectedStylePreset === id;
@@ -148,23 +143,13 @@ export function StylePicker({
             <button
               key={id}
               type="button"
-              onClick={() => {
-                onStylePresetSelect?.(id);
-                onPick?.();
-              }}
-              className={cn(
-                dropdownCardBase,
-                isSelected ? dropdownCardSelected : dropdownCardDefault
-              )}
+              onClick={() => { onStylePresetSelect?.(id); onPick?.(); }}
+              className={cn(cardBase, isSelected ? cardSelected : cardDefault)}
               data-testid={`style-preset-${id}`}
             >
               <div className="w-full aspect-square rounded-md overflow-hidden flex-shrink-0 bg-muted min-h-0">
                 {STYLE_PRESET_IMAGES[id] ? (
-                  <img
-                    src={STYLE_PRESET_IMAGES[id]}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={STYLE_PRESET_IMAGES[id]} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div
                     className={cn(
@@ -173,16 +158,15 @@ export function StylePicker({
                     )}
                   >
                     <Icon
-                      className={cn(
-                        "w-6 h-6",
-                        isSelected ? "text-primary" : "text-muted-foreground"
-                      )}
+                      className={cn("w-6 h-6", isSelected ? "text-primary" : "text-muted-foreground")}
                       strokeWidth={1.5}
                     />
                   </div>
                 )}
               </div>
-              <span className={dropdownLabel}>{STYLE_PRESET_LABELS[id]}</span>
+              <span className={cn(cardLabel, isSelected ? "text-primary font-semibold" : "text-foreground")}>
+                {STYLE_PRESET_LABELS[id]}
+              </span>
             </button>
           );
         })}

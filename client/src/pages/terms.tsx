@@ -11,7 +11,7 @@ export default function Terms() {
 
           <h2>1. Acceptance of Terms</h2>
           <p>
-            By accessing or using ArtTransform, you agree to be bound by these Terms of Service 
+            By accessing or using Art&amp;See, you agree to be bound by these Terms of Service 
             and all applicable laws and regulations.
           </p>
 
@@ -24,7 +24,7 @@ export default function Terms() {
           <h2>3. Intellectual Property</h2>
           <p>
             You retain ownership of your original photos. Transformed artwork is provided for 
-            your personal use. The AI models and technology used remain the property of ArtTransform.
+            your personal use. The AI models and technology used remain the property of Art&amp;See.
           </p>
 
           <h2>4. Prohibited Uses</h2>
@@ -41,7 +41,7 @@ export default function Terms() {
 
           <h2>6. Limitation of Liability</h2>
           <p>
-            ArtTransform shall not be liable for any indirect, incidental, special, consequential, 
+            Art&amp;See shall not be liable for any indirect, incidental, special, consequential, 
             or punitive damages arising from your use of the service.
           </p>
 

@@ -1,5 +1,7 @@
 const MAX_DIMENSION = 2048;
+const MAX_DIMENSION_MULTI = 1280; // Smaller for multi-photo to keep payload reasonable
 const JPEG_QUALITY = 0.85;
+const JPEG_QUALITY_MULTI = 0.75;
 
 export interface OptimizedImage {
   dataUrl: string;
@@ -12,7 +14,11 @@ export interface OptimizedImage {
  * Keeps aspect ratio, caps longest side at MAX_DIMENSION, uses JPEG for photos.
  * Returns dataUrl and dimensions for aspect-ratio-aware transformation.
  */
-export async function optimizeImageForUpload(file: File): Promise<OptimizedImage> {
+/**
+ * @param isMultiPhoto When true, uses smaller dimensions and higher compression
+ *   to keep the total payload reasonable for multi-photo requests.
+ */
+export async function optimizeImageForUpload(file: File, isMultiPhoto = false): Promise<OptimizedImage> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -25,14 +31,15 @@ export async function optimizeImageForUpload(file: File): Promise<OptimizedImage
         return;
       }
 
+      const maxDim = isMultiPhoto ? MAX_DIMENSION_MULTI : MAX_DIMENSION;
       let { width, height } = img;
-      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+      if (width > maxDim || height > maxDim) {
         if (width > height) {
-          height = Math.round((height * MAX_DIMENSION) / width);
-          width = MAX_DIMENSION;
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
         } else {
-          width = Math.round((width * MAX_DIMENSION) / height);
-          height = MAX_DIMENSION;
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
         }
       }
 
@@ -40,8 +47,9 @@ export async function optimizeImageForUpload(file: File): Promise<OptimizedImage
       canvas.height = height;
       ctx.drawImage(img, 0, 0, width, height);
 
-      const mime = file.type.startsWith("image/png") ? "image/png" : "image/jpeg";
-      const quality = mime === "image/jpeg" ? JPEG_QUALITY : 0.92;
+      // Always use JPEG for multi-photo to save space
+      const mime = isMultiPhoto ? "image/jpeg" : (file.type.startsWith("image/png") ? "image/png" : "image/jpeg");
+      const quality = isMultiPhoto ? JPEG_QUALITY_MULTI : (mime === "image/jpeg" ? JPEG_QUALITY : 0.92);
       const dataUrl = canvas.toDataURL(mime, quality);
       resolve({ dataUrl, width: canvas.width, height: canvas.height });
     };

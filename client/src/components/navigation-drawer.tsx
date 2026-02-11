@@ -166,7 +166,7 @@ export function NavigationDrawer({ isOpen, onClose }: NavigationDrawerProps) {
                 data-testid="nav-about"
               >
                 <Info className="w-5 h-5" />
-                <span>About ArtTransform</span>
+                <span>About Art&amp;See</span>
               </div>
             </Link>
 

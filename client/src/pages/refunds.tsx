@@ -22,6 +22,19 @@ export default function Refunds() {
             work with you to create a new version at no extra cost.
           </p>
 
+          <h2>Handmade Products</h2>
+          <p>
+            Our hand-painted oil paintings are made-to-order by professional artists and are 
+            therefore not eligible for a standard refund. However, if you're unhappy with your 
+            painting, please contact us — we want to make it right. All shipments are fully 
+            insured, and we will:
+          </p>
+          <ul>
+            <li>Replace any painting that arrives damaged at no cost to you</li>
+            <li>Provide a full refund for items damaged in transit</li>
+            <li>Work with you on revisions if the painting doesn't meet your expectations</li>
+          </ul>
+
           <h2>Printed Products</h2>
           <p>
             If your printed product arrives damaged or doesn't meet your expectations, please 
@@ -38,7 +51,7 @@ export default function Refunds() {
             To request a refund or report an issue:
           </p>
           <ol>
-            <li>Contact our support team at support@arttransform.com</li>
+            <li>Contact our support team at info@art-and-see.com</li>
             <li>Include your order number and a description of the issue</li>
             <li>For damaged products, please include photos</li>
           </ol>
@@ -58,7 +71,7 @@ export default function Refunds() {
 
           <h2>Contact Us</h2>
           <p>
-            Questions about refunds? Email us at support@arttransform.com or visit our 
+            Questions about refunds? Email us at info@art-and-see.com or visit our 
             Support page.
           </p>
         </div>
