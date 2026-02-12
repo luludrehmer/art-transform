@@ -20,14 +20,24 @@ const pool = new Pool({
   max: 10,
 });
 
+// #region agent log
+pool.on("error", (err) => {
+  console.error("[DB Pool] Unhandled pool error (caught, not crashing):", err?.message || err);
+  fetch('http://127.0.0.1:7244/ingest/8bafcb4e-d69c-4c68-b1ee-557414709f1b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/db.ts:pool.on-error',message:'Pool error caught',data:{error:String(err?.message||err),code:(err as any)?.code},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+});
+// #endregion
+
 // Keep-alive: ping the pool every 60s to prevent WebSocket idle disconnects
 setInterval(async () => {
   try {
     const client = await pool.connect();
     await client.query("SELECT 1");
     client.release();
-  } catch {
-    // Silently ignore — pool will reconnect on next real query
+  } catch (err: any) {
+    // #region agent log
+    console.warn("[DB Pool] Keep-alive ping failed:", err?.message);
+    fetch('http://127.0.0.1:7244/ingest/8bafcb4e-d69c-4c68-b1ee-557414709f1b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/db.ts:keepalive',message:'Keep-alive ping failed',data:{error:String(err?.message||err)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
   }
 }, 60_000);
 

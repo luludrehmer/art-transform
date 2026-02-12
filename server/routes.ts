@@ -235,6 +235,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // In-memory thumbnail cache: cacheKey -> { buffer, contentType, createdAt }
+  const thumbnailCache = new Map<string, { buffer: Buffer; contentType: string; createdAt: number }>();
+  const THUMB_CACHE_TTL = 30 * 60 * 1000; // 30 min
+
   // Free transformation endpoint - no auth required for preview
   app.post("/api/transform", async (req: any, res) => {
     try {
@@ -318,6 +322,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transformedImageUrl,
           });
           console.log(`[transform] ✓ Saved completed transformation ${transformation.id}`);
+
+          // Pre-generate thumbnail for fast checkout loading
+          try {
+            const thumbMatch = transformedImageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
+            if (thumbMatch) {
+              const sharp = (await import("sharp")).default;
+              const fullBuffer = Buffer.from(thumbMatch[2], "base64");
+              // Generate 400px thumbnail for checkout preview
+              const thumbBuffer = await sharp(fullBuffer)
+                .resize(400, null, { withoutEnlargement: true })
+                .jpeg({ quality: 75 })
+                .toBuffer();
+              // Cache the thumbnail in memory (same cache used by /api/transform/:id/image)
+              const thumbCacheKey = `${transformation.id}_w400_q75`;
+              thumbnailCache.set(thumbCacheKey, { buffer: thumbBuffer, contentType: "image/jpeg", createdAt: Date.now() });
+              // Also cache the full image
+              const fullCacheKey = `${transformation.id}_w0_q85`;
+              thumbnailCache.set(fullCacheKey, { buffer: fullBuffer, contentType: `image/${thumbMatch[1] === "jpg" ? "jpeg" : thumbMatch[1]}`, createdAt: Date.now() });
+              console.log(`[transform] ✓ Pre-cached thumbnail (${thumbBuffer.length} bytes) and full image for ${transformation.id}`);
+            }
+          } catch (thumbErr) {
+            console.warn("[transform] Thumbnail pre-generation failed (non-fatal):", (thumbErr as Error).message);
+          }
         } catch (error) {
           const errMsg = extractErrorMessage(error);
           console.error("Transformation processing error:", errMsg);
@@ -371,6 +398,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     "http://127.0.0.1:5001",
   ];
   app.get("/api/transform/:id/image", async (req, res) => {
+    // #region agent log
+    const _imgStart = Date.now();
+    // #endregion
     const origin = req.get("Origin");
     if (origin && (allowedOrigins.includes(origin) || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin))) {
       res.setHeader("Access-Control-Allow-Origin", origin);
@@ -380,7 +410,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.setHeader("Cache-Control", "public, max-age=86400");
 
     try {
+      const maxWidth = req.query.w ? parseInt(String(req.query.w), 10) : 0;
+      const quality = req.query.q ? Math.min(100, Math.max(1, parseInt(String(req.query.q), 10))) : 85;
+      const cacheKey = `${req.params.id}_w${maxWidth}_q${quality}`;
+
+      // Check in-memory cache first
+      const cached = thumbnailCache.get(cacheKey);
+      if (cached && (Date.now() - cached.createdAt < THUMB_CACHE_TTL)) {
+        // #region agent log
+        console.log(`[image] CACHE HIT: ${req.params.id} w=${maxWidth} served in ${Date.now()-_imgStart}ms (${cached.buffer.length} bytes)`);
+        // #endregion
+        res.setHeader("Content-Type", cached.contentType);
+        res.setHeader("X-Cache", "HIT");
+        res.send(cached.buffer);
+        return;
+      }
+
+      // #region agent log
+      const _dbStart = Date.now();
+      // #endregion
       const transformation = await storage.getTransformation(req.params.id);
+      // #region agent log
+      const _dbMs = Date.now() - _dbStart;
+      console.log(`[image] DB read: ${req.params.id} took ${_dbMs}ms, hasImage=${!!transformation?.transformedImageUrl}, dataLen=${transformation?.transformedImageUrl?.length||0}`);
+      // #endregion
+
       if (!transformation?.transformedImageUrl) {
         res.status(404).json({ error: "Transformation image not found" });
         return;
@@ -393,9 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const [mimeType, base64Data] = [match[1] === "jpg" ? "jpeg" : match[1], match[2]];
       let buffer = Buffer.from(base64Data, "base64");
-
-      const maxWidth = req.query.w ? parseInt(String(req.query.w), 10) : 0;
-      const quality = req.query.q ? Math.min(100, Math.max(1, parseInt(String(req.query.q), 10))) : 85;
+      let contentType = `image/${mimeType}`;
 
       if (maxWidth > 0 && maxWidth < 4096) {
         try {
@@ -407,17 +459,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pipeline = pipeline.resize(maxWidth, null, { withoutEnlargement: true });
           }
           buffer = await pipeline.jpeg({ quality }).toBuffer();
-          res.setHeader("Content-Type", "image/jpeg");
+          contentType = "image/jpeg";
         } catch (sharpErr) {
           console.warn("[transform/image] Sharp resize failed, serving original:", (sharpErr as Error).message);
         }
       }
 
-      if (!res.getHeader("Content-Type")) {
-        res.setHeader("Content-Type", `image/${mimeType}`);
+      // Store in cache for next requests
+      thumbnailCache.set(cacheKey, { buffer, contentType, createdAt: Date.now() });
+      // Evict old entries
+      for (const [k, v] of thumbnailCache) {
+        if (Date.now() - v.createdAt > THUMB_CACHE_TTL) thumbnailCache.delete(k);
       }
+
+      // #region agent log
+      console.log(`[image] CACHE MISS: ${req.params.id} w=${maxWidth} served in ${Date.now()-_imgStart}ms (dbMs=${_dbMs}, buf=${buffer.length} bytes)`);
+      // #endregion
+
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("X-Cache", "MISS");
       res.send(buffer);
     } catch (error) {
+      // #region agent log
+      console.error(`[image] ERROR: ${req.params.id} failed in ${Date.now()-_imgStart}ms:`, (error as Error)?.message || error);
+      // #endregion
       res.status(500).json({ error: "Failed to serve image" });
     }
   });
@@ -517,6 +582,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/medusa/checkout", async (req, res) => {
+    // #region agent log
+    const _checkoutStart = Date.now();
+    fetch('http://127.0.0.1:7244/ingest/8bafcb4e-d69c-4c68-b1ee-557414709f1b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/routes.ts:checkout-start',message:'Checkout request received',data:{},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     if (!useMedusa || !medusaStorefront) {
       res.status(503).json({ error: "Medusa checkout not configured. Set MEDUSA_STOREFRONT_URL." });
       return;
@@ -568,7 +637,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const variantSize = productSize;
 
       // Build productConfig for Photos-to-Paintings POST /api/product/cart
-      // downloadUrl: same as previewImageUrl - /api/transform/:id/image serves the clean (non-watermarked) image
+      // previewImageUrl: use thumbnail (400px wide, q75) for fast checkout display
+      // downloadUrl: full-resolution image for delivery
+      const previewThumbUrl = previewImageUrl ? `${previewImageUrl}?w=400&q=75` : undefined;
       const productConfig = {
         source: "art-transform",
         productTitle: productTitle ?? `${productStyle} - ${productType}`.trim(),
@@ -576,13 +647,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         productType,
         productSize,
         productDescription: productDescription || undefined,
-        previewImageUrl: previewImageUrl || undefined,
+        previewImageUrl: previewThumbUrl || undefined,
         downloadUrl: previewImageUrl || undefined,
         // Raw variant option values for Medusa line-item matching (Style, Type, Size)
         variantStyle,
         variantType,
         variantSize,
       };
+
+      // #region agent log
+      console.log(`[checkout] productConfig:`, JSON.stringify({
+        previewImageUrl: previewThumbUrl || "(none)",
+        downloadUrl: previewImageUrl || "(none)",
+        productTitle: productConfig.productTitle,
+        productType: productConfig.productType,
+        productSize: productConfig.productSize,
+        transformationId: transformationId || "(none)",
+      }));
+      // #endregion
 
       const items = [
         {

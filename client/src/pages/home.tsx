@@ -131,6 +131,8 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const params = useParams<{ style?: string; mood?: string }>();
   const resultRef = useRef<HTMLDivElement>(null);
+  /** Only redirect to checkout when user explicitly clicked a buy CTA (prevents auto-redirect after generation). */
+  const purchaseInitiatedByUserRef = useRef(false);
   const content = categoryContent[activeCategory];
 
   const basePath = activeCategory === "pets" ? "/pets" : `/${activeCategory}`;
@@ -220,7 +222,7 @@ export default function Home() {
   const [purchasingTier, setPurchasingTier] = useState<string | null>(null);
   const [showCheckoutOverlay, setShowCheckoutOverlay] = useState(false);
   const [uploadedPhotos, setUploadedPhotos] = useState<Array<{ file: File; previewUrl: string }>>([]);
-  const MAX_PHOTOS = 14;
+  const MAX_PHOTOS = 5;
 
   const TRANSFORM_TIPS = [
     "Analyzing your photo for best composition...",
@@ -475,6 +477,10 @@ export default function Home() {
   };
 
   const handlePurchase = async (tier: string, variantOption?: string) => {
+    if (USE_MEDUSA_PRODUCTS && !purchaseInitiatedByUserRef.current) {
+      return; // Only allow checkout when user explicitly clicked a buy button
+    }
+    if (USE_MEDUSA_PRODUCTS) purchaseInitiatedByUserRef.current = false;
     setCurrentStep("download");
     if (USE_MEDUSA_PRODUCTS) {
       const key = `${tier}-${variantOption ?? ""}`;
@@ -609,7 +615,7 @@ export default function Home() {
                     <Upload className="w-6 h-6 text-muted-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-base font-semibold mb-0.5">Add 1–5 photos</h3>
+                    <h3 className="text-base font-semibold mb-0.5">Upload one or more photos</h3>
                     <p className="text-xs text-muted-foreground">Clear, bright photos work best</p>
                   </div>
                 </div>
@@ -660,11 +666,20 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* Footer: counter + Create Portrait */}
+                {/* Footer: counter + Clear all + Create Portrait */}
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">{uploadedPhotos.length}</span> photo{uploadedPhotos.length !== 1 ? "s" : ""}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">{uploadedPhotos.length}</span>/{MAX_PHOTOS} photo{uploadedPhotos.length !== 1 ? "s" : ""}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); uploadedPhotos.forEach(p => URL.revokeObjectURL(p.previewUrl)); setUploadedPhotos([]); }}
+                      className="text-xs text-muted-foreground hover:text-foreground underline"
+                    >
+                      Clear all
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={handleCreatePortrait}
@@ -916,7 +931,7 @@ export default function Home() {
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Instant Download</li>
                   <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />High-Resolution Portrait</li>
                 </ul>
-                <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase("Instant Masterpiece")} disabled={!!purchasingTier} data-testid="button-buy-instant">
+                <Button type="button" className="w-full" variant="default" size="lg" onClick={() => { purchaseInitiatedByUserRef.current = true; handlePurchase("Instant Masterpiece"); }} disabled={!!purchasingTier} data-testid="button-buy-instant">
                   {purchasingTier === "Instant Masterpiece-" ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding to cart...</> : "Download Now"}
                 </Button>
               </Card>
@@ -960,7 +975,7 @@ export default function Home() {
                   <FreeShippingBadge deliveryTime="5-7 days" />
                 </div>
                 <p className="text-xs text-primary mb-2">+ Includes digital download</p>
-                <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase("Fine Art Canvas Print", printSize)} disabled={!!purchasingTier} data-testid="button-buy-print">
+                <Button type="button" className="w-full" variant="default" size="lg" onClick={() => { purchaseInitiatedByUserRef.current = true; handlePurchase("Fine Art Canvas Print", printSize); }} disabled={!!purchasingTier} data-testid="button-buy-print">
                   {purchasingTier === `Fine Art Canvas Print-${printSize}` ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding to cart...</> : "Order Canvas"}
                 </Button>
               </Card>
@@ -1008,7 +1023,7 @@ export default function Home() {
                   <FreeShippingBadge deliveryTime="2-4 weeks" />
                 </div>
                 <p className="text-xs text-primary mb-2">+ Includes digital download</p>
-                <Button className="w-full" variant="default" size="lg" onClick={() => handlePurchase(styleData[selectedStyle].name, handmadeSize)} disabled={!!purchasingTier} data-testid="button-buy-handmade">
+                <Button type="button" className="w-full" variant="default" size="lg" onClick={() => { purchaseInitiatedByUserRef.current = true; handlePurchase(styleData[selectedStyle].name, handmadeSize); }} disabled={!!purchasingTier} data-testid="button-buy-handmade">
                   {purchasingTier === `${styleData[selectedStyle].name}-${handmadeSize}` ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding to cart...</> : `Order ${styleData[selectedStyle].name}`}
                 </Button>
               </Card>

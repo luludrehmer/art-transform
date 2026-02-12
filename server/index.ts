@@ -3,6 +3,18 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// #region agent log
+// Prevent Neon DB connection drops from crashing the process
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[PROCESS] Unhandled rejection (caught, not crashing):", reason);
+  fetch('http://127.0.0.1:7244/ingest/8bafcb4e-d69c-4c68-b1ee-557414709f1b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/index.ts:unhandledRejection',message:'Unhandled rejection caught',data:{reason:String(reason)},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+});
+process.on("uncaughtException", (err) => {
+  console.error("[PROCESS] Uncaught exception (caught, not crashing):", err?.message || err);
+  fetch('http://127.0.0.1:7244/ingest/8bafcb4e-d69c-4c68-b1ee-557414709f1b',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/index.ts:uncaughtException',message:'Uncaught exception caught',data:{error:String(err?.message||err),code:(err as any)?.code},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+});
+// #endregion
+
 const app = express();
 
 declare module 'http' {
