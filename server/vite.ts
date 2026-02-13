@@ -76,6 +76,12 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Explicit /gallery/ route for Medusa product images (before general static)
+  const galleryPath = path.join(distPath, "gallery");
+  if (fs.existsSync(galleryPath)) {
+    app.use("/gallery", express.static(galleryPath, { maxAge: "1d" }));
+  }
+
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist

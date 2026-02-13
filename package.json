@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/index.ts",
     "dev:fresh": "lsof -ti:5001 | xargs kill -9 2>/dev/null; npm run dev",
+    "prebuild": "npm run copy-gallery",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
@@ -20,10 +21,14 @@
     "medusa-diagnose": "tsx scripts/medusa-diagnose-variants.ts",
     "medusa-fix-variant-inventory": "tsx scripts/medusa-fix-variant-inventory.ts",
     "medusa-verify-metadata": "tsx scripts/verify-medusa-line-item-metadata.ts",
+    "copy-gallery": "tsx scripts/copy-gallery-to-public.ts",
+    "upload-gallery-to-r2": "tsx scripts/upload-gallery-to-r2.ts",
+    "medusa-inject-images": "tsx scripts/medusa-inject-variant-images.ts",
     "migrate:images-to-imgbb": "tsx scripts/migrate-images-to-imgbb.ts",
     "update-browserslist": "npx update-browserslist-db@latest"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.989.0",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
