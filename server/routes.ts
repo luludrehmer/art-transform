@@ -773,7 +773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const imageLink = meta.thumbnail || productImage;
           const googleCat = meta.google_product_category || "500044";
           const productType = meta.product_type || "Custom Portraits";
-          const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+          const escXml = (s: string | undefined | null) => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
           let itemXml = `
     <item>
