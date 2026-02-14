@@ -24,6 +24,10 @@
     "copy-gallery": "tsx scripts/copy-gallery-to-public.ts",
     "upload-gallery-to-r2": "tsx scripts/upload-gallery-to-r2.ts",
     "medusa-inject-images": "tsx scripts/medusa-inject-variant-images.ts",
+    "medusa-generate-seo": "tsx scripts/medusa-generate-seo-metadata.ts",
+    "medusa-inject-seo": "tsx scripts/medusa-inject-seo-metadata.ts",
+    "medusa-inject-seo-robust": "tsx scripts/medusa-inject-seo-robust.ts",
+    "medusa-inject-seo-db": "tsx scripts/medusa-inject-seo-direct-db.ts",
     "migrate:images-to-imgbb": "tsx scripts/migrate-images-to-imgbb.ts",
     "update-browserslist": "npx update-browserslist-db@latest"
   },

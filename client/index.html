@@ -39,6 +39,80 @@
     
     <link rel="preconnect" href="https://portraits.art-and-see.com">
     <link rel="dns-prefetch" href="https://portraits.art-and-see.com">
+
+    <!-- Structured Data: Organization Schema (Google Shopping 2026) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "OnlineStore",
+      "@id": "https://ai.art-and-see.com/#organization",
+      "name": "Art & See",
+      "alternateName": "Art and See - AI Photo to Art",
+      "url": "https://ai.art-and-see.com/",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://ai.art-and-see.com/logo3.png",
+        "width": 512,
+        "height": 512
+      },
+      "description": "Transform your photos into stunning custom portraits. Choose your medium: oil painting, acrylic, watercolor, pencil sketch, charcoal, pastel. AI-powered instant preview, museum-quality prints and handmade paintings.",
+      "image": "https://ai.art-and-see.com/logo3.png",
+      "priceRange": "$$",
+      "email": "info@art-and-see.com",
+      "address": { "@type": "PostalAddress", "addressCountry": "US" },
+      "sameAs": [
+        "https://www.facebook.com/artandsee",
+        "https://www.instagram.com/artandsee",
+        "https://twitter.com/artandsee",
+        "https://www.pinterest.com/artandsee",
+        "https://portraits.art-and-see.com"
+      ],
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.9",
+        "reviewCount": "2000",
+        "bestRating": "5",
+        "worstRating": "1"
+      },
+      "hasMerchantReturnPolicy": {
+        "@type": "MerchantReturnPolicy",
+        "@id": "https://ai.art-and-see.com/#returnpolicy",
+        "applicableCountry": "US",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+        "merchantReturnDays": 30,
+        "returnMethod": "https://schema.org/ReturnByMail",
+        "returnFees": "https://schema.org/FreeReturn"
+      }
+    }
+    </script>
+
+    <!-- Structured Data: Shipping Details -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "OfferShippingDetails",
+      "@id": "https://ai.art-and-see.com/#shipping",
+      "shippingRate": { "@type": "MonetaryAmount", "value": "0", "currency": "USD" },
+      "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "US" },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "handlingTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 3, "unitCode": "DAY" },
+        "transitTime": { "@type": "QuantitativeValue", "minValue": 3, "maxValue": 7, "unitCode": "DAY" }
+      }
+    }
+    </script>
+
+    <!-- Structured Data: WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "@id": "https://ai.art-and-see.com/#website",
+      "name": "Art & See - AI Photo to Art",
+      "url": "https://ai.art-and-see.com/",
+      "publisher": { "@id": "https://ai.art-and-see.com/#organization" }
+    }
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">

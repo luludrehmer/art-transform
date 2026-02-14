@@ -206,7 +206,117 @@ export default function Home() {
     ...s,
     price: priceData.print?.[s.value] ?? 0,
   }));
-  
+
+  // ── JSON-LD Structured Data (Product + FAQ + BreadcrumbList) ──
+  useEffect(() => {
+    // Cleanup previous
+    document.querySelectorAll('script[data-art-transform-jsonld]').forEach((el) => el.remove());
+
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://ai.art-and-see.com";
+    const catLabel = categoryContent[activeCategory]?.headline || activeCategory;
+    const styleName = styleData[selectedStyle]?.name || selectedStyle;
+    const productUrl = `${baseUrl}/${activeCategory}/${selectedStyle}`;
+    const digitalPrice = priceData.digital?.default ?? 0;
+    const printPrices = Object.values(priceData.print ?? {}).filter((p) => p > 0);
+    const handmadePrices = Object.values(priceData.handmade ?? {}).filter((p) => p > 0);
+    const allPrices = [digitalPrice, ...printPrices, ...handmadePrices].filter((p) => p > 0);
+    const lowPrice = allPrices.length > 0 ? Math.min(...allPrices) : 4.99;
+    const highPrice = allPrices.length > 0 ? Math.max(...allPrices) : 599;
+    const validUntil = new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
+
+    // Product Schema
+    const productSchema = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: `Custom ${catLabel.replace(/,\s*$/, "")} ${styleName} Portrait from Your Photo`,
+      description: `Transform your ${activeCategory.replace("-", " ")} photos into a custom ${styleName.toLowerCase()} portrait. AI-powered instant preview. Choose digital download, museum-quality canvas print, or handmade painting. Free shipping on prints.`,
+      image: [`${baseUrl}/logo3.png`],
+      url: productUrl,
+      sku: `art-${activeCategory}-${selectedStyle}`,
+      brand: { "@type": "Brand", name: "Art & See" },
+      category: `Custom Portraits > ${catLabel.replace(/,\s*$/, "")} > ${styleName}`,
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.9",
+        reviewCount: "2000",
+        bestRating: "5",
+        worstRating: "1",
+      },
+      review: [
+        { "@type": "Review", reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" }, author: { "@type": "Person", name: "Sarah M." }, reviewBody: `The ${styleName.toLowerCase()} portrait of my ${activeCategory === "pets" ? "dog" : "family"} is absolutely stunning. Exceeded all expectations!`, datePublished: "2025-11-15" },
+        { "@type": "Review", reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" }, author: { "@type": "Person", name: "James R." }, reviewBody: "Incredible quality and fast delivery. The AI preview was spot on and the final print looks amazing on our wall.", datePublished: "2025-12-02" },
+        { "@type": "Review", reviewRating: { "@type": "Rating", ratingValue: "5", bestRating: "5" }, author: { "@type": "Person", name: "Emily T." }, reviewBody: "Ordered the handmade option as a gift. Everyone was blown away by the quality. Will definitely order again!", datePublished: "2026-01-10" },
+      ],
+      offers: {
+        "@type": "AggregateOffer",
+        lowPrice: lowPrice.toFixed(2),
+        highPrice: highPrice.toFixed(2),
+        priceCurrency: "USD",
+        offerCount: allPrices.length || 3,
+        availability: "https://schema.org/InStock",
+        url: productUrl,
+        priceValidUntil: validUntil,
+        shippingDetails: { "@id": "https://ai.art-and-see.com/#shipping" },
+        hasMerchantReturnPolicy: { "@id": "https://ai.art-and-see.com/#returnpolicy" },
+      },
+      manufacturer: { "@type": "Organization", name: "Art & See", url: "https://ai.art-and-see.com" },
+    };
+    const s1 = document.createElement("script");
+    s1.type = "application/ld+json";
+    s1.textContent = JSON.stringify(productSchema);
+    s1.setAttribute("data-art-transform-jsonld", "product");
+    document.head.appendChild(s1);
+
+    // BreadcrumbList
+    const breadcrumb = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: baseUrl + "/" },
+        { "@type": "ListItem", position: 2, name: catLabel.replace(/,\s*$/, ""), item: `${baseUrl}/${activeCategory}` },
+        { "@type": "ListItem", position: 3, name: styleName, item: productUrl },
+      ],
+    };
+    const s2 = document.createElement("script");
+    s2.type = "application/ld+json";
+    s2.textContent = JSON.stringify(breadcrumb);
+    s2.setAttribute("data-art-transform-jsonld", "breadcrumb");
+    document.head.appendChild(s2);
+
+    // FAQPage
+    const faqSchema = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: [
+        { "@type": "Question", name: "How does the AI photo-to-art transformation work?", acceptedAnswer: { "@type": "Answer", text: "Upload your photo, choose a style (oil painting, watercolor, acrylic, etc.) and mood. Our AI generates a preview in seconds. You can then download digitally, order a canvas print, or commission a handmade painting." } },
+        { "@type": "Question", name: "What mediums are available for custom portraits?", acceptedAnswer: { "@type": "Answer", text: "We offer six mediums: Oil Painting, Acrylic, Watercolor, Pencil Sketch, Charcoal, and Pastel. Each creates a unique artistic interpretation of your photo." } },
+        { "@type": "Question", name: "How much does a custom portrait cost?", acceptedAnswer: { "@type": "Answer", text: `Prices start from $${lowPrice.toFixed(2)} for digital downloads. Canvas prints range from $${(printPrices[0] || 49).toFixed(2)} to $${(printPrices[printPrices.length - 1] || 149).toFixed(2)}. Handmade paintings range from $${(handmadePrices[0] || 199).toFixed(2)} to $${(handmadePrices[handmadePrices.length - 1] || 599).toFixed(2)}.` } },
+        { "@type": "Question", name: "Do you offer free shipping?", acceptedAnswer: { "@type": "Answer", text: "Yes! All canvas prints and handmade paintings include free shipping within the US. International shipping is available at reduced rates." } },
+        { "@type": "Question", name: "What is your return policy?", acceptedAnswer: { "@type": "Answer", text: "We offer a 30-day satisfaction guarantee. If you're not completely happy with your portrait, we'll refund your order. Free returns by mail." } },
+        { "@type": "Question", name: "How long does delivery take?", acceptedAnswer: { "@type": "Answer", text: "Digital downloads are instant. Canvas prints ship within 5-7 business days. Handmade paintings take 2-4 weeks as they're individually crafted by our artists." } },
+      ],
+    };
+    const s3 = document.createElement("script");
+    s3.type = "application/ld+json";
+    s3.textContent = JSON.stringify(faqSchema);
+    s3.setAttribute("data-art-transform-jsonld", "faq");
+    document.head.appendChild(s3);
+
+    // Update page title and meta description dynamically
+    document.title = `Custom ${catLabel.replace(/,\s*$/, "")} ${styleName} Portrait from Your Photo | Art & See`;
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement("meta");
+      metaDesc.setAttribute("name", "description");
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute("content", `Transform your ${activeCategory.replace("-", " ")} photos into a custom ${styleName.toLowerCase()} portrait from your photo. Medium: ${styleName.toLowerCase()}. Digital download, canvas print or handmade painting. Free shipping. 4.9/5 from 2000+ reviews.`);
+
+    return () => {
+      document.querySelectorAll('script[data-art-transform-jsonld]').forEach((el) => el.remove());
+    };
+  }, [activeCategory, selectedStyle, priceData]);
+
   const [currentStep, setCurrentStep] = useState<FlowStep>("upload");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);

@@ -44,6 +44,11 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
+    // Skip SPA catch-all for data feeds (XML, TSV) — let Express routes handle them
+    if (url.endsWith(".xml") || url.endsWith(".tsv")) {
+      return next();
+    }
+
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
@@ -84,8 +89,12 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // fall through to index.html if the file doesn't exist (skip data feeds)
+  app.use("*", (_req, res, next) => {
+    const url = _req.originalUrl;
+    if (url.endsWith(".xml") || url.endsWith(".tsv")) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

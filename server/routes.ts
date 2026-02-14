@@ -674,11 +674,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
       ];
 
+      const cartController = new AbortController();
+      const cartTimeout = setTimeout(() => cartController.abort(), 30_000); // 30s timeout
       const productCartRes = await fetch(`${medusaStorefront}/api/product/cart`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ items }),
+        signal: cartController.signal,
       });
+      clearTimeout(cartTimeout);
 
       const productCartBody = await productCartRes.text();
       if (!productCartRes.ok) {
@@ -720,12 +724,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (productSize) params.set("psize", productSize);
       const checkoutUrl = `${medusaStorefront}${pathPrefix}/checkout?${params.toString()}`;
       res.json({ checkoutUrl, cartId });
-    } catch (error) {
-      console.error("Medusa checkout error:", error);
-      res.status(500).json({
-        error: "Failed to create checkout",
+    } catch (error: any) {
+      const isTimeout = error?.name === "AbortError";
+      console.error("Medusa checkout error:", isTimeout ? "Checkout timed out after 30s" : error?.message || error);
+      res.status(isTimeout ? 504 : 500).json({
+        error: isTimeout ? "Checkout timed out. Please try again." : "Failed to create checkout",
         details: error instanceof Error ? error.message : "Unknown error",
       });
+    }
+  });
+
+  // ── Google Shopping Product Feed (XML) — art-transform variants from Medusa ──
+  app.get("/product-feed.xml", async (req, res) => {
+    if (!medusaBackend) {
+      return res.status(503).header("Content-Type", "application/xml").send('<?xml version="1.0"?><error>Medusa not configured</error>');
+    }
+    try {
+      const baseUrl = req.protocol + "://" + req.get("host");
+      const categories = ["pets", "family", "kids", "couples", "self-portrait"];
+      const items: string[] = [];
+
+      for (const cat of categories) {
+        const handle = `art-transform-${cat}`;
+        const params = new URLSearchParams();
+        params.set("handle", handle);
+        params.set("region_id", medusaRegionId);
+        params.set("fields", "*variants.calculated_price,*variants.metadata,*variants.sku,thumbnail,images");
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (medusaPublishableKey) headers["x-publishable-api-key"] = medusaPublishableKey;
+
+        const medusaRes = await fetch(`${medusaBackend}/store/products?${params.toString()}`, { headers });
+        if (!medusaRes.ok) continue;
+        const data = await medusaRes.json() as { products?: any[] };
+        const product = data.products?.[0];
+        if (!product?.variants?.length) continue;
+
+        const productUrl = `${baseUrl}/${cat}`;
+        const productImage = product.thumbnail || product.images?.[0]?.url || "";
+
+        for (const v of product.variants) {
+          const meta = v.metadata || {};
+          const sku = v.sku || v.id;
+          const price = Number(v.calculated_price?.calculated_amount ?? 0).toFixed(2);
+          const title = meta.seo_title || `${product.title} - ${v.title}`;
+          const desc = meta.seo_description || product.description || product.title;
+          const imageLink = meta.thumbnail || productImage;
+          const googleCat = meta.google_product_category || "500044";
+          const productType = meta.product_type || "Custom Portraits";
+          const escXml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+
+          let itemXml = `
+    <item>
+      <g:id>${escXml(sku)}</g:id>
+      <g:item_group_id>${escXml(product.id)}</g:item_group_id>
+      <g:title>${escXml(title)}</g:title>
+      <g:description>${escXml(desc)}</g:description>
+      <g:link>${escXml(productUrl)}</g:link>
+      <g:image_link>${escXml(imageLink)}</g:image_link>
+      <g:availability>in stock</g:availability>
+      <g:price>${price} USD</g:price>
+      <g:condition>new</g:condition>
+      <g:brand>Art &amp; See</g:brand>
+      <g:mpn>${escXml(sku)}</g:mpn>
+      <g:identifier_exists>TRUE</g:identifier_exists>
+      <g:google_product_category>${escXml(googleCat)}</g:google_product_category>
+      <g:product_type>${escXml(productType)}</g:product_type>
+      <g:shipping>
+        <g:country>US</g:country>
+        <g:service>Standard</g:service>
+        <g:price>0.00 USD</g:price>
+      </g:shipping>
+    </item>`;
+          items.push(itemXml);
+        }
+      }
+
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>Art &amp; See - AI Photo to Art Product Feed</title>
+    <link>${baseUrl}</link>
+    <description>AI-powered custom portraits: oil painting, watercolor, acrylic, pencil sketch, charcoal, pastel</description>${items.join("")}
+  </channel>
+</rss>`;
+      res.header("Content-Type", "application/xml; charset=utf-8");
+      res.header("Cache-Control", "public, max-age=3600");
+      res.send(xml);
+    } catch (error) {
+      console.error("[Art Transform Feed] Error:", error);
+      res.status(500).send("Error generating product feed");
+    }
+  });
+
+  // ── Pinterest Catalog Feed (TSV) — art-transform variants from Medusa ──
+  app.get("/pinterest-catalog.tsv", async (req, res) => {
+    if (!medusaBackend) {
+      return res.status(503).header("Content-Type", "text/tab-separated-values").send("id\ttitle\n");
+    }
+    try {
+      const baseUrl = req.protocol + "://" + req.get("host");
+      const categories = ["pets", "family", "kids", "couples", "self-portrait"];
+      const escapeTsv = (s: string | undefined) => (s ?? "").replace(/\t/g, " ").replace(/\n/g, " ");
+      const header = "id\ttitle\tdescription\tlink\timage_link\tadditional_image_link\tprice\tavailability\tcondition\tbrand\tgoogle_product_category\tproduct_type\titem_group_id\tgender\tage_group\tmpn";
+      const rows: string[] = [];
+
+      for (const cat of categories) {
+        const handle = `art-transform-${cat}`;
+        const params = new URLSearchParams();
+        params.set("handle", handle);
+        params.set("region_id", medusaRegionId);
+        params.set("fields", "*variants.calculated_price,*variants.metadata,*variants.sku,thumbnail,images");
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (medusaPublishableKey) headers["x-publishable-api-key"] = medusaPublishableKey;
+
+        const medusaRes = await fetch(`${medusaBackend}/store/products?${params.toString()}`, { headers });
+        if (!medusaRes.ok) continue;
+        const data = await medusaRes.json() as { products?: any[] };
+        const product = data.products?.[0];
+        if (!product?.variants?.length) continue;
+
+        const productUrl = `${baseUrl}/${cat}`;
+        const productImage = product.thumbnail || product.images?.[0]?.url || "";
+
+        for (const v of product.variants) {
+          const meta = v.metadata || {};
+          const sku = v.sku || v.id;
+          const price = Number(v.calculated_price?.calculated_amount ?? 0).toFixed(2);
+          rows.push([
+            escapeTsv(sku),
+            escapeTsv(meta.seo_title || `${product.title} - ${v.title}`),
+            escapeTsv(meta.seo_description || product.description || product.title),
+            escapeTsv(productUrl),
+            escapeTsv(meta.thumbnail || productImage),
+            "",
+            `${price} USD`,
+            "in stock",
+            "new",
+            "Art & See",
+            escapeTsv(meta.google_product_category || "500044"),
+            escapeTsv(meta.product_type || "Custom Portraits"),
+            escapeTsv(product.id),
+            "unisex",
+            "adult",
+            escapeTsv(sku),
+          ].join("\t"));
+        }
+      }
+
+      res.header("Content-Type", "text/tab-separated-values; charset=utf-8");
+      res.header("Cache-Control", "public, max-age=3600");
+      res.send([header, ...rows].join("\n"));
+    } catch (error) {
+      console.error("[Art Transform Pinterest Feed] Error:", error);
+      res.status(500).send("Error generating Pinterest catalog feed");
     }
   });
 
