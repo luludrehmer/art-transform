@@ -749,7 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const params = new URLSearchParams();
         params.set("handle", handle);
         params.set("region_id", medusaRegionId);
-        params.set("fields", "*variants.calculated_price,*variants.metadata,*variants.sku,thumbnail,images");
+        params.set("fields", "title,description,handle,*variants.calculated_price,*variants.metadata,*variants.sku,*variants.title,thumbnail,images");
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (medusaPublishableKey) headers["x-publishable-api-key"] = medusaPublishableKey;
 
@@ -761,13 +761,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const productUrl = `${baseUrl}/${cat}`;
         const productImage = product.thumbnail || product.images?.[0]?.url || "";
+        const productTitle = product.title || product.handle || cat;
+        const productDesc = product.description || productTitle;
 
         for (const v of product.variants) {
           const meta = v.metadata || {};
           const sku = v.sku || v.id;
           const price = Number(v.calculated_price?.calculated_amount ?? 0).toFixed(2);
-          const title = meta.seo_title || `${product.title} - ${v.title}`;
-          const desc = meta.seo_description || product.description || product.title;
+          const title = meta.seo_title || `${productTitle} - ${v.title || sku}`;
+          const desc = meta.seo_description || productDesc;
           const imageLink = meta.thumbnail || productImage;
           const googleCat = meta.google_product_category || "500044";
           const productType = meta.product_type || "Custom Portraits";
@@ -810,9 +812,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.header("Content-Type", "application/xml; charset=utf-8");
       res.header("Cache-Control", "public, max-age=3600");
       res.send(xml);
-    } catch (error) {
+    } catch (error: any) {
       console.error("[Art Transform Feed] Error:", error);
-      res.status(500).send("Error generating product feed");
+      const msg = error?.message || String(error);
+      res.status(500).header("Content-Type", "application/xml").send(
+        `<?xml version="1.0"?><error>Product feed error: ${msg.replace(/[<>&]/g, '_')}</error>`
+      );
     }
   });
 
@@ -833,7 +838,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const params = new URLSearchParams();
         params.set("handle", handle);
         params.set("region_id", medusaRegionId);
-        params.set("fields", "*variants.calculated_price,*variants.metadata,*variants.sku,thumbnail,images");
+        params.set("fields", "title,description,handle,*variants.calculated_price,*variants.metadata,*variants.sku,*variants.title,thumbnail,images");
         const headers: Record<string, string> = { "Content-Type": "application/json" };
         if (medusaPublishableKey) headers["x-publishable-api-key"] = medusaPublishableKey;
 
@@ -845,6 +850,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const productUrl = `${baseUrl}/${cat}`;
         const productImage = product.thumbnail || product.images?.[0]?.url || "";
+        const productTitle = product.title || product.handle || cat;
+        const productDesc = product.description || productTitle;
 
         for (const v of product.variants) {
           const meta = v.metadata || {};
@@ -852,8 +859,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const price = Number(v.calculated_price?.calculated_amount ?? 0).toFixed(2);
           rows.push([
             escapeTsv(sku),
-            escapeTsv(meta.seo_title || `${product.title} - ${v.title}`),
-            escapeTsv(meta.seo_description || product.description || product.title),
+            escapeTsv(meta.seo_title || `${productTitle} - ${v.title || sku}`),
+            escapeTsv(meta.seo_description || productDesc),
             escapeTsv(productUrl),
             escapeTsv(meta.thumbnail || productImage),
             "",
