@@ -734,6 +734,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Shorten Medusa SKU to fit Google Merchant Center 50-char limit for g:id
+  // Deterministic: same SKU always produces the same short ID
+  function shortenSkuForFeed(sku: string): string {
+    if (sku.length <= 50) return sku;
+    const abbrevs: Record<string, string> = {
+      'self-portrait': 'sp', 'oil-painting': 'oil', 'pencil-sketch': 'ps',
+      'watercolor': 'wc', 'charcoal': 'ch', 'acrylic': 'ac', 'pastel': 'pa',
+      'handmade': 'hm', 'digital': 'dg', 'default': 'df',
+      'neoclassical': 'neo', 'royal_noble': 'rn', 'heritage': 'her',
+      'classic': 'cls', 'couples': 'cp', 'family': 'fm', 'kids': 'kd',
+      'pets': 'pt', 'print': 'pr',
+    };
+    let short = sku;
+    for (const [long, abbr] of Object.entries(abbrevs)) {
+      short = short.replace(new RegExp(long, 'g'), abbr);
+    }
+    // Remove consecutive hyphens
+    short = short.replace(/-{2,}/g, '-');
+    // If still over 50, take first 50
+    return short.slice(0, 50);
+  }
+
   // ── Google Shopping Product Feed (XML) — art-transform variants from Medusa ──
   app.get("/product-feed.xml", async (req, res) => {
     if (!medusaBackend) {
@@ -777,7 +799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           let itemXml = `
     <item>
-      <g:id>${escXml(sku)}</g:id>
+      <g:id>${escXml(shortenSkuForFeed(sku))}</g:id>
       <g:item_group_id>${escXml(product.id)}</g:item_group_id>
       <g:title>${escXml(title)}</g:title>
       <g:description>${escXml(desc)}</g:description>
@@ -857,8 +879,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const meta = v.metadata || {};
           const sku = v.sku || v.id;
           const price = Number(v.calculated_price?.calculated_amount ?? 0).toFixed(2);
+          const feedId = shortenSkuForFeed(sku);
           rows.push([
-            escapeTsv(sku),
+            escapeTsv(feedId),
             escapeTsv(meta.seo_title || `${productTitle} - ${v.title || sku}`),
             escapeTsv(meta.seo_description || productDesc),
             escapeTsv(productUrl),
@@ -873,7 +896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             escapeTsv(product.id),
             "unisex",
             "adult",
-            escapeTsv(sku),
+            escapeTsv(feedId),
           ].join("\t"));
         }
       }
