@@ -136,6 +136,14 @@ export default function Result() {
         });
         const data = await res.json();
         if (data.checkoutUrl) {
+          // Pinterest: track add-to-cart before redirect to checkout
+          if (typeof window.pintrk === 'function') {
+            window.pintrk('track', 'addtocart', {
+              product_name: productHandle,
+              value: 0,
+              currency: 'USD',
+            });
+          }
           window.location.href = data.checkoutUrl;
           return;
         }

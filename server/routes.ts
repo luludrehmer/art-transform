@@ -792,8 +792,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const price = Number(v.calculated_price?.calculated_amount ?? 0).toFixed(2);
           const title = meta.seo_title || `${productTitle} - ${v.title || sku}`;
           const desc = meta.seo_description || productDesc;
-          const imageLink = meta.thumbnail || productImage;
-          const googleCat = meta.google_product_category || "500044";
+          const imageLink = (meta.thumbnail || productImage || "").trim();
+          if (!imageLink) continue; // Skip items without image — Google rejects; fix in Medusa
+          const isDigital = /digital\s*download/i.test(String(v.title || ""));
+          const googleCat = meta.google_product_category || (isDigital ? "7862" : "500044"); // 7862 = Digital products
           const productType = meta.product_type || "Custom Portraits";
           const escXml = (s: string | undefined | null) => (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 
@@ -878,20 +880,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const v of product.variants) {
           const meta = v.metadata || {};
           const sku = v.sku || v.id;
+          const imageLink = (meta.thumbnail || productImage || "").trim();
+          if (!imageLink) continue; // Skip items without image — fix in Medusa
           const price = Number(v.calculated_price?.calculated_amount ?? 0).toFixed(2);
           const feedId = shortenSkuForFeed(sku);
+          const isDigital = /digital\s*download/i.test(String(v.title || ""));
+          const googleCat = meta.google_product_category || (isDigital ? "7862" : "500044");
           rows.push([
             escapeTsv(feedId),
             escapeTsv(meta.seo_title || `${productTitle} - ${v.title || sku}`),
             escapeTsv(meta.seo_description || productDesc),
             escapeTsv(productUrl),
-            escapeTsv(meta.thumbnail || productImage),
+            escapeTsv(imageLink),
             "",
             `${price} USD`,
             "in stock",
             "new",
             "Art & See",
-            escapeTsv(meta.google_product_category || "500044"),
+            escapeTsv(googleCat),
             escapeTsv(meta.product_type || "Custom Portraits"),
             escapeTsv(product.id),
             "unisex",
