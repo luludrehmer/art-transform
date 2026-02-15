@@ -123,9 +123,10 @@
       pintrk('load', '2615415053205');
       pintrk('page');
     </script>
-    <noscript><img height="1" width="1" style="display:none" src="https://ct.pinterest.com/v3/?event=init&tid=2615415053205&noscript=1" alt="" /></noscript>
   </head>
   <body>
+    <!-- Pinterest noscript fallback (must be in body: img not allowed in head/noscript per HTML5) -->
+    <noscript><img height="1" width="1" style="display:none" src="https://ct.pinterest.com/v3/?event=init&tid=2615415053205&noscript=1" alt="" /></noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
