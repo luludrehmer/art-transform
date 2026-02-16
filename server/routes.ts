@@ -2,7 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertTransformationSchema } from "@shared/schema";
+import { insertTransformationSchema, transformations } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { setupAuth, isAuthenticated } from "./auth";
 import { generateGalleryImage } from "./generate-gallery";
@@ -913,6 +915,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[Art Transform Pinterest Feed] Error:", error);
       res.status(500).send("Error generating Pinterest catalog feed");
+    }
+  });
+
+  // ── Admin: simple auth + transformations list ──
+  const ADMIN_USER = process.env.ADMIN_USER || "admin";
+  const ADMIN_PASS = process.env.ADMIN_PASS || "admin123";
+
+  app.post("/api/admin/login", (req, res) => {
+    const { username, password } = req.body || {};
+    if (username === ADMIN_USER && password === ADMIN_PASS) {
+      const token = Buffer.from(`${ADMIN_USER}:${Date.now()}`).toString("base64");
+      return res.json({ token });
+    }
+    res.status(401).json({ error: "Invalid credentials" });
+  });
+
+  const requireAdminToken = (req: any, res: any, next: any) => {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+      const decoded = Buffer.from(auth.slice(7), "base64").toString();
+      if (!decoded.startsWith(`${ADMIN_USER}:`)) {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+      next();
+    } catch {
+      res.status(401).json({ error: "Invalid token" });
+    }
+  };
+
+  app.get("/api/admin/transformations", requireAdminToken, async (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
+      const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "50"), 10)));
+      const offset = (page - 1) * limit;
+      const statusFilter = req.query.status as string | undefined;
+
+      const { desc, count: countFn, sql: sqlTag } = await import("drizzle-orm");
+      const conditions = statusFilter
+        ? eq(transformations.status, statusFilter)
+        : undefined;
+
+      const [countResult] = await db
+        .select({ count: countFn(transformations.id) })
+        .from(transformations)
+        .where(conditions);
+
+      const rows = await db
+        .select({
+          id: transformations.id,
+          style: transformations.style,
+          status: transformations.status,
+          createdAt: transformations.createdAt,
+          hasImage: sqlTag<boolean>`${transformations.transformedImageUrl} IS NOT NULL AND ${transformations.transformedImageUrl} != ''`,
+        })
+        .from(transformations)
+        .where(conditions)
+        .orderBy(desc(transformations.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      res.json({
+        transformations: rows,
+        total: Number(countResult?.count ?? 0),
+        page,
+        limit,
+        pages: Math.ceil(Number(countResult?.count ?? 0) / limit),
+      });
+    } catch (error) {
+      console.error("[Admin] Error listing transformations:", error);
+      res.status(500).json({ error: "Failed to list transformations" });
+    }
+  });
+
+  app.delete("/api/admin/transformations/:id", requireAdminToken, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await db
+        .delete(transformations)
+        .where(eq(transformations.id, id))
+        .returning({ id: transformations.id });
+      if (deleted.length === 0) {
+        return res.status(404).json({ error: "Not found" });
+      }
+      res.json({ success: true, id });
+    } catch (error) {
+      console.error("[Admin] Error deleting transformation:", error);
+      res.status(500).json({ error: "Failed to delete transformation" });
     }
   });
 

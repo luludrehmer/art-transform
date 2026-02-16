@@ -18,12 +18,14 @@ import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import Refunds from "@/pages/refunds";
 import SignIn from "@/pages/signin";
+import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/admin" component={Admin} />
       <Route path="/pets/:style/:mood" component={Home} />
       <Route path="/pets/:style" component={Home} />
       <Route path="/pets" component={Home} />
